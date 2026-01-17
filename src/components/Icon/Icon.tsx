@@ -21,7 +21,7 @@ export const Icon = forwardRef<HTMLSpanElement, IIconProps>((props, ref) => {
 		type,
 		onClick && "iconButton",
 		onClick && styles.iconButton,
-		className,
+		className
 	);
 
 	return (
