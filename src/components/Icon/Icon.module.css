@@ -1,0 +1,14 @@
+.iconButton {
+	border-radius: 9999px;
+	padding: 16px;
+}
+
+.iconButton:hover {
+	cursor: pointer;
+	background: hsl(var(--colorBrandPrimary) / 75%);
+	color: white;
+}
+
+.iconButton:active {
+	background: hsl(var(--colorBrandPrimary));
+}

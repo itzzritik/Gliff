@@ -1,0 +1,56 @@
+{
+	"name": "ion-ui",
+	"version": "0.0.1",
+	"type": "module",
+	"main": "dist/ion.umd.cjs",
+	"module": "dist/ion.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/ion.js",
+			"require": "./dist/ion.umd.cjs",
+			"types": "./dist/index.d.ts"
+		},
+		"./styles.css": "./dist/style.css"
+	},
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc -b && vite build",
+		"preview": "vite preview",
+		"storybook": "storybook dev -p 6006",
+		"build-storybook": "storybook build",
+		"lint": "biome check",
+		"format": "biome format --write"
+	},
+	"dependencies": {
+		"@lottiefiles/dotlottie-react": "^0.17.13",
+		"clsx": "^2.1.1",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.11",
+		"@chromatic-com/storybook": "^5.0.0",
+		"@storybook/addon-a11y": "^10.1.11",
+		"@storybook/addon-docs": "^10.1.11",
+		"@storybook/addon-onboarding": "^10.1.11",
+		"@storybook/addon-vitest": "^10.1.11",
+		"@storybook/react-vite": "^10.1.11",
+		"@types/node": "^24.10.9",
+		"@types/react": "^19.2.5",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^5.1.1",
+		"@vitest/browser-playwright": "^4.0.17",
+		"@vitest/coverage-v8": "^4.0.17",
+		"playwright": "^1.57.0",
+		"storybook": "^10.1.11",
+		"typescript": "~5.9.3",
+		"vite": "^7.2.4",
+		"vite-plugin-dts": "^4.5.4",
+		"vitest": "^4.0.17"
+	},
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	}
+}
