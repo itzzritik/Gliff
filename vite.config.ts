@@ -10,7 +10,7 @@ import dts from 'vite-plugin-dts';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-	plugins: [react(), dts({ insertTypesEntry: true, tsconfigPath: './tsconfig.app.json' })],
+	plugins: [react(), dts({ insertTypesEntry: true, tsconfigPath: './tsconfig.app.json', rollupTypes: true })],
 	build: {
 		lib: {
 			entry: path.resolve(dirname, 'src/index.ts'),
