@@ -2,7 +2,6 @@ import { type DotLottie, DotLottieReact } from "@lottiefiles/dotlottie-react";
 import clsx from "clsx";
 import { forwardRef, useEffect, useState } from "react";
 import styles from "./Lottie.module.css";
-import { LottieSize, type TLottieProps } from "./types";
 
 export const Lottie = forwardRef<HTMLDivElement, TLottieProps>((props, ref) => {
 	const {
@@ -43,3 +42,19 @@ export const Lottie = forwardRef<HTMLDivElement, TLottieProps>((props, ref) => {
 });
 
 Lottie.displayName = "Lottie";
+
+export const LottieSize = {
+	mini: 64,
+	default: 128,
+	large: 256,
+} as const;
+
+export interface TLottieProps {
+	className?: string;
+	src: string;
+	size?: number | keyof typeof LottieSize;
+	controls?: boolean;
+	autoPlay?: boolean;
+	loop?: boolean;
+	speed?: number;
+}

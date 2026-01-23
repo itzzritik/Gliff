@@ -6,6 +6,32 @@
 		"name": "Ritik Srivastava"
 	},
 	"license": "ISC",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc -b && vite build",
+		"lint": "biome check",
+		"format": "biome format --write"
+	},
+	"peerDependencies": {
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0"
+	},
+	"dependencies": {
+		"@lottiefiles/dotlottie-react": "^0.17.13",
+		"clsx": "^2.1.1"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.11",
+		"@types/node": "^24.10.9",
+		"@types/react": "^19.2.5",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^5.1.1",
+		"typescript": "~5.9.3",
+		"ultracite": "^7.0.11",
+		"vite": "^7.2.4",
+		"vite-plugin-dts": "^4.5.4",
+		"vite-plugin-lib-inject-css": "^2.2.2"
+	},
 	"homepage": "https://github.com/itzzritik/Gliff#readme",
 	"bugs": {
 		"url": "https://github.com/itzzritik/Gliff/issues"
@@ -36,42 +62,14 @@
 			"import": "./dist/gliff.js",
 			"require": "./dist/gliff.umd.cjs"
 		},
-		"./styles.css": "./dist/style.css"
+		"./styles": "./dist/index.css"
 	},
 	"files": [
 		"dist"
 	],
-	"sideEffects": false,
-	"scripts": {
-		"dev": "vite",
-		"build": "tsc -b && vite build",
-		"preview": "vite preview",
-		"lint": "biome check",
-		"format": "biome format --write"
-	},
-	"peerDependencies": {
-		"react": "^19.2.0",
-		"react-dom": "^19.2.0"
-	},
-	"dependencies": {
-		"@lottiefiles/dotlottie-react": "^0.17.13",
-		"clsx": "^2.1.1"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.3.11",
-		"@types/node": "^24.10.9",
-		"@types/react": "^19.2.5",
-		"@types/react-dom": "^19.2.3",
-		"@vitejs/plugin-react": "^5.1.1",
-		"@vitest/browser-playwright": "^4.0.17",
-		"@vitest/coverage-v8": "^4.0.17",
-		"playwright": "^1.57.0",
-		"typescript": "~5.9.3",
-		"ultracite": "^7.0.11",
-		"vite": "^7.2.4",
-		"vite-plugin-dts": "^4.5.4",
-		"vitest": "^4.0.17"
-	},
+	"sideEffects": [
+		"**/*.css"
+	],
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"

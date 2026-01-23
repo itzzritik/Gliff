@@ -1,41 +1,67 @@
-import clsx from "clsx";
-import { forwardRef } from "react";
-import { unicodeToString } from "../../utils";
+import { clsx } from "clsx";
+import { forwardRef, type HTMLAttributes } from "react";
+import { toGlyph } from "../../utils";
 import styles from "./Icon.module.css";
-import { IconSize, type IIconProps } from "./types";
 
-export const Icon = forwardRef<HTMLSpanElement, IIconProps>((props, ref) => {
+export const Icon = forwardRef<HTMLSpanElement, TIconProps>((props, ref) => {
 	const {
 		className,
-		style = {},
 		code,
-		type = "light",
+		set = "classic",
+		type = "regular",
 		size = "default",
-		onClick,
+		style = {},
+		...rest
 	} = props;
 
+	const prefix = set === "classic" ? "" : set;
+	const suffix = set === "brand" ? "" : type;
+	const iconStyle = `${prefix}${prefix && suffix ? "-" : ""}${suffix}`;
 	const iconSize = `${typeof size === "number" ? size : IconSize[size]}px`;
-	const IconClsx = clsx(
-		"xIcon",
-		"fa",
-		type,
-		onClick && "iconButton",
-		onClick && styles.iconButton,
-		className
-	);
 
 	return (
-		// biome-ignore lint/a11y/useKeyWithClickEvents: suppress strict a11y check
-		// biome-ignore lint/a11y/noNoninteractiveElementInteractions: suppress strict a11y check
 		<i
-			className={IconClsx}
-			data-content={unicodeToString(code)}
-			onClick={onClick}
+			className={clsx(
+				"xIcon fa",
+				iconStyle,
+				props.onClick && styles.iconButton,
+				className
+			)}
+			data-content={toGlyph(code)}
 			ref={ref}
 			role="img"
 			style={{ ["--iconSize" as string]: iconSize, ...style }}
+			{...rest}
 		/>
 	);
 });
 
 Icon.displayName = "Icon";
+
+export const ICON_SET = {
+	classic: "classic",
+	duotone: "duotone",
+	sharp: "sharp",
+	"sharp-duotone": "sharp-duotone",
+	brand: "brand",
+} as const;
+
+export const ICON_TYPES = {
+	thin: "thin",
+	light: "light",
+	regular: "regular",
+	solid: "solid",
+} as const;
+
+export const IconSize = {
+	mini: 12,
+	default: 18,
+	large: 24,
+} as const;
+
+export type TIconProps = HTMLAttributes<HTMLElement> & {
+	code: number | string;
+	set?: keyof typeof ICON_SET;
+	type?: keyof typeof ICON_TYPES;
+	size?: number | keyof typeof IconSize;
+};

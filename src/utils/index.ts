@@ -1,19 +1,15 @@
-export const safeStringFromCodePoint = (codePoint: number) => {
-	if (
-		Number.isNaN(codePoint) ||
-		codePoint < 0 ||
-		codePoint > 0x10_ff_ff ||
-		Math.floor(codePoint) !== codePoint
-	)
-		return "";
+const UNICODE_PREFIX_REGEX = /^0x|^u\+?/i;
+const MAX_UNICODE_CODE_POINT = 0x10_ff_ff;
 
-	return String.fromCodePoint(codePoint);
-};
+export const toGlyph = (input: number | string): string => {
+	const codePoint =
+		typeof input === "number"
+			? input
+			: Number.parseInt(input.replace(UNICODE_PREFIX_REGEX, ""), 16);
 
-export const unicodeToString = (unicode: string) => {
-	return safeStringFromCodePoint(Number.parseInt(`0x${unicode}`, 16));
-};
-
-export const capitalize = (string: string) => {
-	return string.charAt(0).toUpperCase() + string.slice(1);
+	return Number.isInteger(codePoint) &&
+		codePoint >= 0 &&
+		codePoint <= MAX_UNICODE_CODE_POINT
+		? String.fromCodePoint(codePoint)
+		: "";
 };
