@@ -2,7 +2,7 @@ export const safeStringFromCodePoint = (codePoint: number) => {
 	if (
 		Number.isNaN(codePoint) ||
 		codePoint < 0 ||
-		codePoint > 0x10ffff ||
+		codePoint > 0x10_ff_ff ||
 		Math.floor(codePoint) !== codePoint
 	)
 		return "";
