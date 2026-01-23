@@ -17,7 +17,7 @@ export const Icon = forwardRef<HTMLSpanElement, IIconProps>((props, ref) => {
 	const iconSize = `${typeof size === "number" ? size : IconSize[size]}px`;
 	const IconClsx = clsx(
 		"xIcon",
-		"fa", // FontAwesome class
+		"fa",
 		type,
 		onClick && "iconButton",
 		onClick && styles.iconButton,
@@ -25,14 +25,15 @@ export const Icon = forwardRef<HTMLSpanElement, IIconProps>((props, ref) => {
 	);
 
 	return (
-		// biome-ignore lint/a11y/useKeyWithClickEvents: Icon interaction handling
+		// biome-ignore lint/a11y/useKeyWithClickEvents: suppress strict a11y check
+		// biome-ignore lint/a11y/noNoninteractiveElementInteractions: suppress strict a11y check
 		<i
-			ref={ref}
 			className={IconClsx}
-			style={{ ["--iconSize" as string]: iconSize, ...style }}
 			data-content={unicodeToString(code)}
-			role="img"
 			onClick={onClick}
+			ref={ref}
+			role="img"
+			style={{ ["--iconSize" as string]: iconSize, ...style }}
 		/>
 	);
 });

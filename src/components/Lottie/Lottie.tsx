@@ -25,18 +25,18 @@ export const Lottie = forwardRef<HTMLDivElement, TLottieProps>((props, ref) => {
 
 	return (
 		<div
-			ref={ref}
 			className={LottieClsx}
+			ref={ref}
 			style={{ ["--lottieSize" as string]: lottieSize }}
 		>
 			<DotLottieReact
+				autoplay={autoPlay}
 				className={styles.lottie}
 				dotLottieRefCallback={setDotLottie}
-				src={src}
-				autoplay={autoPlay}
 				loop={loop}
-				speed={speed}
 				marker="lottie"
+				speed={speed}
+				src={src}
 			/>
 		</div>
 	);

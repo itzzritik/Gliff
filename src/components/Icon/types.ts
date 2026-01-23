@@ -1,13 +1,13 @@
 import type { CSSProperties } from "react";
 
-export type IIconProps = {
+export interface IIconProps {
 	className?: string;
 	style?: CSSProperties;
 	code: string;
 	type?: keyof typeof IconType;
 	size?: number | keyof typeof IconSize;
-	onClick?: () => void;
-};
+	onClick?: (e?: React.MouseEvent<HTMLElement>) => void;
+}
 
 export const IconType = {
 	thin: "thin",
