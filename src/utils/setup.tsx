@@ -1,11 +1,11 @@
-interface IonProps {
+interface GliffProps {
 	react?: boolean;
 }
 
 const CDN =
 	"https://cdn.jsdelivr.net/gh/itzzjarvis/Assets@main/styles/fa/fa.css";
 
-export const Ion = ({ react }: IonProps) => {
+export const Gliff = ({ react }: GliffProps) => {
 	if (react && typeof document !== "undefined") {
 		if (!document.querySelector(`link[href="${CDN}"]`)) {
 			const link = document.createElement("link");

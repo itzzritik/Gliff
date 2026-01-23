@@ -1,18 +1,22 @@
 {
-	"name": "ion-ui",
+	"name": "gliff",
 	"version": "0.0.1",
 	"type": "module",
-	"main": "dist/ion.umd.cjs",
-	"module": "dist/ion.js",
+	"main": "dist/gliff.umd.cjs",
+	"module": "dist/gliff.js",
 	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/ion.js",
-			"require": "./dist/ion.umd.cjs"
+			"import": "./dist/gliff.js",
+			"require": "./dist/gliff.umd.cjs"
 		},
 		"./styles.css": "./dist/style.css"
 	},
+	"files": [
+		"dist"
+	],
+	"sideEffects": false,
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -b && vite build",
@@ -20,11 +24,13 @@
 		"lint": "biome check",
 		"format": "biome format --write"
 	},
-	"dependencies": {
-		"@lottiefiles/dotlottie-react": "^0.17.13",
-		"clsx": "^2.1.1",
+	"peerDependencies": {
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0"
+	},
+	"dependencies": {
+		"@lottiefiles/dotlottie-react": "^0.17.13",
+		"clsx": "^2.1.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.11",

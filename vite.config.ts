@@ -12,24 +12,32 @@ const dirname =
 		? __dirname
 		: path.dirname(fileURLToPath(import.meta.url));
 
-// More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
 	plugins: [react(), dts({ insertTypesEntry: true })],
 	build: {
 		lib: {
 			entry: path.resolve(dirname, "src/index.ts"),
-			name: "Ion",
-			fileName: "ion",
+			name: "Gliff",
+			fileName: "gliff",
 		},
 		rollupOptions: {
-			external: ["react", "react-dom", "react/jsx-runtime"],
+			external: [
+				"react",
+				"react-dom",
+				"react/jsx-runtime",
+				"@lottiefiles/dotlottie-react",
+			],
 			output: {
 				globals: {
 					react: "React",
 					"react-dom": "ReactDOM",
+					"react/jsx-runtime": "jsxRuntime",
+					"@lottiefiles/dotlottie-react": "DotLottieReact",
 				},
 			},
 		},
+		sourcemap: false,
+		minify: "esbuild",
 	},
 	test: {
 		browser: {
