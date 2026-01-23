@@ -1,25 +1,84 @@
-name: Publish Package to npmjs
+name: Publish NPM Package
 on:
-    release:
-        types: [created]
+    workflow_dispatch:
+        inputs:
+            version:
+                description: New version
+                required: true
+                default: 'patch'
+                type: choice
+                options:
+                    - patch
+                    - minor
+                    - major
+    push:
+        branches:
+            - main
+
+permissions:
+    contents: write
+    id-token: write
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-    build:
+    publish:
+        if: github.actor != 'itzzjarvis'
+        name: Publish new ${{ github.event_name == 'push' && 'patch' || github.event.inputs.version }} version
         runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            id-token: write
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - name: Checkout to 'main' Branch ✔️
+              uses: actions/checkout@v4
               with:
-                  node-version: '20'
+                  fetch-depth: 0
+
+            - name: Use Node.js v24.x 👀
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24.x
                   registry-url: 'https://registry.npmjs.org'
-            - name: Install dependencies
-              run: npm ci
-            - name: Build
-              run: npm run build
-            - name: Publish to npm
-              run: npm publish --provenance --access public
+
+            - name: Install dependencies using pnpm 📦
+              uses: pnpm/action-setup@v4
+              with:
+                  version: latest
+                  run_install: true
+
+            - name: Setup Git & GPG 🔐
+              run: |
+                  git config --global user.email "ritik.jarvis@gmail.com"
+                  git config --global user.name "Jarvis"
+
+                  mkdir -p ~/.ssh/
+                  echo "${{ secrets.JARVIS_SSH_KEY }}" > ~/.ssh/id_rsa
+                  chmod 600 ~/.ssh/id_rsa
+                  ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+                  git config --global gpg.format ssh
+                  git config --global user.signingkey ~/.ssh/id_rsa
+                  git config --global commit.gpgsign true
+                  git config --global tag.gpgsign true
+                  npm config set sign-git-tag true
+
+            - name: Generate new version (Local Only) 🏷️
+              env:
+                  VERSION: ${{ github.event.inputs.version || 'patch' }}
+              run: |
+                  TAG=$(npm version $VERSION --no-git-tag-version)
+                  git tag -d $TAG 2>/dev/null || true
+                  git push origin :refs/tags/$TAG 2>/dev/null || true
+                  git commit -am "🤖 Jarvis published a $VERSION version [skip ci]"
+                  git tag -s -m "🤖 Jarvis published a $VERSION version" $TAG
+
+            - name: Building Package 🏗️
+              run: pnpm build
+
+            - name: Publishing Package 🚀
+              run: npm publish --access public --provenance
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: Push new version to repository 🎉
+              run: git push --follow-tags
