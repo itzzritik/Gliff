@@ -1,6 +1,31 @@
 {
 	"name": "gliff",
 	"version": "0.0.1",
+	"description": "React components for Gliff, including Icons and Lottie animations.",
+	"author": {
+		"name": "Ritik Srivastava"
+	},
+	"license": "ISC",
+	"homepage": "https://github.com/itzzritik/Gliff#readme",
+	"bugs": {
+		"url": "https://github.com/itzzritik/Gliff/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/itzzritik/Gliff"
+	},
+	"keywords": [
+		"gliff",
+		"react",
+		"icon",
+		"lottie",
+		"components",
+		"ui",
+		"animations"
+	],
+	"engines": {
+		"node": ">=20"
+	},
 	"type": "module",
 	"main": "dist/gliff.umd.cjs",
 	"module": "dist/gliff.js",
