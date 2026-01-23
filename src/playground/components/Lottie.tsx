@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lottie, type TLottieProps } from "../../components/Lottie/lottie";
+import { Lottie, type TLottieProps } from "../../components/Lottie/Lottie";
 import styles from "../Playground.module.css";
 
 const DEFAULT_LOTTIE =

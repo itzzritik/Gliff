@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Icon, type TIconProps } from "../../components/Icon/icon";
+import { Icon, type TIconProps } from "../../components/Icon/Icon";
 import styles from "../Playground.module.css";
 
 const EXAMPLE_ICONS = [

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { IconPlayground } from "./playground/components/icon";
-import { LottiePlayground } from "./playground/components/lottie";
+import { IconPlayground } from "./playground/components/Icon";
+import { LottiePlayground } from "./playground/components/Lottie";
 import styles from "./playground/Playground.module.css";
 
 const App = () => {
