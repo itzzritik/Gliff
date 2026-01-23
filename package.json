@@ -1,6 +1,6 @@
 {
 	"name": "gliff",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "React components for Gliff, including Icons and Lottie animations.",
 	"author": {
 		"name": "Ritik Srivastava"
