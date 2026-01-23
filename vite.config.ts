@@ -25,6 +25,7 @@ export default defineConfig({
 			name: "Gliff",
 			fileName: "gliff",
 			entry: path.resolve(dirname, "src/index.ts"),
+			formats: ["es"],
 		},
 		rollupOptions: {
 			external: [
@@ -33,16 +34,8 @@ export default defineConfig({
 				"react/jsx-runtime",
 				"@lottiefiles/dotlottie-react",
 			],
-			output: {
-				globals: {
-					react: "React",
-					"react-dom": "ReactDOM",
-					"react/jsx-runtime": "jsxRuntime",
-					"@lottiefiles/dotlottie-react": "DotLottieReact",
-				},
-			},
 		},
 		sourcemap: false,
-		minify: "esbuild",
+		minify: "terser",
 	},
 });

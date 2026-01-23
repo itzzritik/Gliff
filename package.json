@@ -10,25 +10,26 @@
 		"dev": "vite",
 		"build": "tsc -b && vite build",
 		"lint": "biome check",
-		"format": "biome format --write"
+		"format": "biome format --write",
+		"clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install"
 	},
 	"peerDependencies": {
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0"
 	},
 	"dependencies": {
-		"@lottiefiles/dotlottie-react": "^0.17.13",
-		"clsx": "^2.1.1"
+		"@lottiefiles/dotlottie-react": "^0.17.13"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.11",
-		"@types/node": "^24.10.9",
-		"@types/react": "^19.2.5",
+		"@biomejs/biome": "^2.3.12",
+		"@types/node": "^25.0.10",
+		"@types/react": "^19.2.9",
 		"@types/react-dom": "^19.2.3",
-		"@vitejs/plugin-react": "^5.1.1",
-		"typescript": "~5.9.3",
-		"ultracite": "^7.0.11",
-		"vite": "^7.2.4",
+		"@vitejs/plugin-react": "^5.1.2",
+		"terser": "^5.46.0",
+		"typescript": "~5.8.2",
+		"ultracite": "^7.0.12",
+		"vite": "^7.3.1",
 		"vite-plugin-dts": "^4.5.4",
 		"vite-plugin-lib-inject-css": "^2.2.2"
 	},
@@ -53,14 +54,14 @@
 		"node": ">=20"
 	},
 	"type": "module",
-	"main": "dist/gliff.umd.cjs",
+	"main": "dist/gliff.js",
 	"module": "dist/gliff.js",
 	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/gliff.js",
-			"require": "./dist/gliff.umd.cjs"
+			"default": "./dist/gliff.js"
 		},
 		"./styles": "./dist/index.css"
 	},

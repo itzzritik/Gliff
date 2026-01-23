@@ -1,6 +1,6 @@
 import { type DotLottie, DotLottieReact } from "@lottiefiles/dotlottie-react";
-import clsx from "clsx";
 import { forwardRef, useEffect, useState } from "react";
+import { cn } from "../../utils/cn";
 import styles from "./Lottie.module.css";
 
 export const Lottie = forwardRef<HTMLDivElement, TLottieProps>((props, ref) => {
@@ -16,7 +16,7 @@ export const Lottie = forwardRef<HTMLDivElement, TLottieProps>((props, ref) => {
 	const [dotLottie, setDotLottie] = useState<DotLottie | null>(null);
 
 	const lottieSize = `${typeof size === "number" ? size : LottieSize[size]}px`;
-	const LottieClsx = clsx("xLottie", styles.lottieWrapper, className);
+	const LottieClsx = cn("xLottie", styles.lottieWrapper, className);
 
 	useEffect(() => {
 		if (lottieSize) dotLottie?.resize();

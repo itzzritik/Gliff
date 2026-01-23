@@ -1,6 +1,6 @@
-import { clsx } from "clsx";
 import { forwardRef, type HTMLAttributes } from "react";
-import { toGlyph } from "../../utils";
+import { cn } from "../../utils/cn";
+import { toGlyph } from "../../utils/glyph";
 import styles from "./Icon.module.css";
 
 export const Icon = forwardRef<HTMLSpanElement, TIconProps>((props, ref) => {
@@ -21,7 +21,7 @@ export const Icon = forwardRef<HTMLSpanElement, TIconProps>((props, ref) => {
 
 	return (
 		<i
-			className={clsx(
+			className={cn(
 				"xIcon fa",
 				iconStyle,
 				props.onClick && styles.iconButton,
