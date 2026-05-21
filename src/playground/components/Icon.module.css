@@ -36,8 +36,8 @@
 	}
 }
 
-/* ── Stage ────────────────────────────────────────────────────────────── */
-.stage {
+/* ── Specimen ─────────────────────────────────────────────────────────── */
+.specimen {
 	position: relative;
 	border: 1px solid var(--hairline);
 	border-radius: var(--radius-3);
@@ -46,39 +46,61 @@
 	animation: fade-up var(--dur-slow) var(--ease-precision) 100ms both;
 }
 
-.stageMarks {
-	position: absolute;
-	inset: var(--space-3) var(--space-3) auto;
+.specimenInfo {
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	font-family: var(--font-mono);
-	font-size: 10px;
-	letter-spacing: 0.14em;
-	color: var(--muted);
-	z-index: 4;
-	pointer-events: none;
+	flex-direction: column;
+	gap: var(--space-3);
+	padding: var(--space-4);
 }
 
-.stageCanvas {
+.specimenHead {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--space-4);
+}
+
+.specimenCode {
+	font-family: var(--font-display);
+	font-size: 42px;
+	font-weight: 400;
+	letter-spacing: -0.02em;
+	line-height: 0.95;
+	color: var(--fg);
+	font-variant-numeric: tabular-nums;
+	animation: glyph-pop 300ms var(--ease-precision);
+}
+
+.specimenMeta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 14px;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--muted);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.01em;
+}
+
+.specimenPreview {
 	position: relative;
-	aspect-ratio: 16 / 11;
+	aspect-ratio: 16 / 10;
 	width: 100%;
 }
 
-.stageGrid {
+.specimenGrid {
 	position: absolute;
 	inset: 0;
 	pointer-events: none;
 	background-image:
 		linear-gradient(to right, var(--hairline) 1px, transparent 1px),
 		linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
-	background-size: 32px 32px;
-	background-position: -1px -1px;
+	background-size: calc(100% / 12) calc(100% / 8);
+	background-position: 0 0;
 	z-index: 1;
 }
 
-.stageGlyph {
+.specimenGlyph {
 	position: absolute;
 	inset: 0;
 	display: flex;
@@ -120,7 +142,7 @@
 	font-family: var(--font-display);
 	font-size: 28px;
 	font-weight: 400;
-		font-variant-numeric: tabular-nums;
+	font-variant-numeric: tabular-nums;
 	letter-spacing: -0.02em;
 	color: var(--fg);
 }
@@ -215,33 +237,6 @@
 	color: var(--fg);
 }
 
-/* ── Properties — compact header card; code is the hero ─────────────── */
-.properties {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-3);
-	padding: var(--space-4);
-	border: 1px solid var(--hairline);
-	border-radius: var(--radius-3);
-	background: var(--bg-elev);
-	min-height: 132px;
-	animation: fade-up var(--dur-slow) var(--ease-precision) 60ms both;
-}
-
-.propsHead {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.propsLabel {
-	font-family: var(--font-mono);
-	font-size: 10px;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
-	color: var(--muted);
-}
-
 .propsCopy {
 	display: inline-flex;
 	align-items: center;
@@ -270,32 +265,6 @@
 	color: #fff;
 	background: var(--accent);
 	border-color: var(--accent);
-}
-
-.propsCode {
-	font-family: var(--font-display);
-	font-size: 38px;
-	font-weight: 400;
-	letter-spacing: -0.02em;
-	line-height: 1;
-	color: var(--fg);
-	font-variant-numeric: tabular-nums;
-	padding: 2px 0;
-	animation: glyph-pop 300ms var(--ease-precision);
-}
-
-.propsMeta {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0 14px;
-	padding-top: var(--space-3);
-	margin-top: auto;
-	border-top: 1px solid var(--hairline);
-	font-family: var(--font-mono);
-	font-size: 11px;
-	color: var(--muted);
-	font-variant-numeric: tabular-nums;
-	letter-spacing: 0.01em;
 }
 
 .metaItem {

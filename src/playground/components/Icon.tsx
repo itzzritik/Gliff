@@ -166,14 +166,14 @@ export const IconWorkbench = () => {
 	return (
 		<div className={styles.workbench}>
 			<aside className={styles.sidebar}>
-				<Properties
+				<Specimen
 					code={code}
 					family={active.family}
+					iconProps={iconProps}
+					size={size}
 					style={active.style}
 					weight={active.weight}
-					size={size}
 				/>
-				<Stage iconProps={iconProps} />
 				<SizeScrubber size={size} onChange={setSize} />
 				<Snippet code={code} set={active.set} type={active.type} size={size} />
 			</aside>
@@ -199,26 +199,91 @@ export const IconWorkbench = () => {
 };
 
 /* ────────────────────────────────────────────────────────────────────
- * Stage — split-bg hero glyph (light ↔ dark halves)
+ * Specimen — selected glyph details and preview
  * ──────────────────────────────────────────────────────────────────── */
 
-const Stage = ({ iconProps }: { iconProps: TIconProps }) => {
+const Specimen = ({
+	code,
+	family,
+	iconProps,
+	size,
+	style,
+	weight,
+}: {
+	code: string;
+	family: string;
+	iconProps: TIconProps;
+	size: number;
+	style: string;
+	weight: number | string;
+}) => {
 	const [bumpKey, setBumpKey] = useState(0);
+	const [copied, setCopied] = useState(false);
 
-	// Re-key on variant/code/size change to retrigger the pop animation.
 	useEffect(() => {
 		setBumpKey((k) => k + 1);
 	}, [iconProps.code, iconProps.set, iconProps.type]);
 
+	const onCopy = useCallback(async () => {
+		try {
+			await navigator.clipboard.writeText(code);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 1400);
+		} catch {
+			// Clipboard permissions can fail in some browser contexts.
+		}
+	}, [code]);
+
+	const metaParts = [family, style, String(weight), `${size}px`].filter(Boolean);
+
 	return (
-		<div className={styles.stage}>
-			<div className={styles.stageMarks} aria-hidden="true">
-				<span>PREVIEW</span>
-				<span>{(iconProps as { code: string }).code}</span>
+		<div className={styles.specimen}>
+			<div className={styles.specimenInfo}>
+				<div className={styles.specimenHead}>
+					<div className={styles.specimenCode} key={code}>
+						{code}
+					</div>
+					<button
+						aria-label="Copy unicode code"
+						className={styles.propsCopy}
+						data-state={copied ? "copied" : "idle"}
+						onClick={onCopy}
+						type="button"
+					>
+						<svg
+							aria-hidden="true"
+							fill="none"
+							height="11"
+							stroke="currentColor"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth="1.4"
+							viewBox="0 0 16 16"
+							width="11"
+						>
+							{copied ? (
+								<path d="M3 8.5 L6.5 12 L13 4" />
+							) : (
+								<>
+									<rect height="9" rx="1.5" width="9" x="5" y="5" />
+									<path d="M3 11 L2.5 11 A1 1 0 0 1 2 10 L2 3 A1 1 0 0 1 3 2 L10 2 A1 1 0 0 1 11 3 L11 3.5" />
+								</>
+							)}
+						</svg>
+						<span>{copied ? "COPIED" : "COPY"}</span>
+					</button>
+				</div>
+				<div className={styles.specimenMeta}>
+					{metaParts.map((part, i) => (
+						<span className={styles.metaItem} key={`${part}-${i}`}>
+							{part}
+						</span>
+					))}
+				</div>
 			</div>
-			<div className={styles.stageCanvas}>
-				<div className={styles.stageGrid} aria-hidden="true" />
-				<div className={styles.stageGlyph} key={`g-${bumpKey}`}>
+			<div className={styles.specimenPreview}>
+				<div aria-hidden="true" className={styles.specimenGrid} />
+				<div className={styles.specimenGlyph} key={`g-${bumpKey}`}>
 					<Icon {...iconProps} />
 				</div>
 			</div>
@@ -291,84 +356,6 @@ const NumberFlip = ({ value }: { value: number | string }) => {
 				</span>
 			))}
 		</span>
-	);
-};
-
-/* ────────────────────────────────────────────────────────────────────
- * Properties — compact header card. Code is the hero; everything else
- * is a single mono line. Copy button copies just the unicode code.
- * ──────────────────────────────────────────────────────────────────── */
-
-const Properties = ({
-	code,
-	family,
-	style,
-	weight,
-	size,
-}: {
-	code: string;
-	family: string;
-	style: string;
-	weight: number | string;
-	size: number;
-}) => {
-	const [copied, setCopied] = useState(false);
-
-	const onCopy = useCallback(async () => {
-		try {
-			await navigator.clipboard.writeText(code);
-			setCopied(true);
-			setTimeout(() => setCopied(false), 1400);
-		} catch {}
-	}, [code]);
-
-	const metaParts = [family, style, String(weight), `${size}px`].filter(Boolean);
-
-	return (
-		<div className={styles.properties}>
-			<div className={styles.propsHead}>
-				<span className={styles.propsLabel}>CODE</span>
-				<button
-					type="button"
-					onClick={onCopy}
-					data-state={copied ? "copied" : "idle"}
-					className={styles.propsCopy}
-					aria-label="Copy unicode code"
-				>
-					<svg
-						width="11"
-						height="11"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="1.4"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						aria-hidden="true"
-					>
-						{copied ? (
-							<path d="M3 8.5 L6.5 12 L13 4" />
-						) : (
-							<>
-								<rect x="5" y="5" width="9" height="9" rx="1.5" />
-								<path d="M3 11 L2.5 11 A1 1 0 0 1 2 10 L2 3 A1 1 0 0 1 3 2 L10 2 A1 1 0 0 1 11 3 L11 3.5" />
-							</>
-						)}
-					</svg>
-					<span>{copied ? "COPIED" : "COPY"}</span>
-				</button>
-			</div>
-			<div className={styles.propsCode} key={code}>
-				{code}
-			</div>
-			<div className={styles.propsMeta}>
-				{metaParts.map((part, i) => (
-					<span key={`${part}-${i}`} className={styles.metaItem}>
-						{part}
-					</span>
-				))}
-			</div>
-		</div>
 	);
 };
 
