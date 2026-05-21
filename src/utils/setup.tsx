@@ -3,7 +3,7 @@ type GliffProps =
 	| { react?: boolean; next: boolean };
 
 const CDN =
-	"https://cdn.jsdelivr.net/gh/itzzjarvis/Assets@f2c70b85964f2ee09d0156c041e567e8b841ea32/styles/fa/fa.css";
+	"https://cdn.jsdelivr.net/gh/itzzjarvis/Assets@4231f53b3bda5e395667afba53ec98051f8ee848/styles/fa/fa.css";
 
 export const Gliff = ({ react, next }: GliffProps) => {
 	if (
