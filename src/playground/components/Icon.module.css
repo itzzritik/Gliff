@@ -1,0 +1,663 @@
+/* ──────────────────────────────────────────────────────────────────────
+ * Icon workbench — Specimen aesthetic
+ * ────────────────────────────────────────────────────────────────────── */
+
+.workbench {
+	display: grid;
+	grid-template-columns: var(--sidebar-w) 1fr;
+	gap: var(--space-6);
+	padding: var(--space-6);
+	max-width: 1680px;
+	margin: 0 auto;
+}
+
+.sidebar {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-6);
+	position: sticky;
+	top: calc(var(--chrome-h) + var(--space-6));
+	align-self: start;
+}
+
+.canvas {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-8);
+	min-width: 0;
+}
+
+@media (max-width: 1024px) {
+	.workbench {
+		grid-template-columns: 1fr;
+	}
+	.sidebar {
+		position: static;
+	}
+}
+
+/* ── Stage ────────────────────────────────────────────────────────────── */
+.stage {
+	position: relative;
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-3);
+	overflow: hidden;
+	background: var(--bg-elev);
+	animation: fade-up var(--dur-slow) var(--ease-precision) 100ms both;
+}
+
+.stageMarks {
+	position: absolute;
+	inset: var(--space-3) var(--space-3) auto;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.14em;
+	color: var(--muted);
+	z-index: 4;
+	pointer-events: none;
+}
+
+.stageCanvas {
+	position: relative;
+	aspect-ratio: 16 / 11;
+	width: 100%;
+}
+
+.stageGrid {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background-image:
+		linear-gradient(to right, var(--hairline) 1px, transparent 1px),
+		linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
+	background-size: 32px 32px;
+	background-position: -1px -1px;
+	z-index: 1;
+}
+
+.stageGlyph {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2;
+	color: var(--fg);
+	animation: glyph-pop 380ms var(--ease-precision);
+}
+
+/* ── Size scrubber ───────────────────────────────────────────────────── */
+.scrubber {
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-3);
+	padding: var(--space-4) var(--space-4) var(--space-3);
+	background: var(--bg-elev);
+	animation: fade-up var(--dur-slow) var(--ease-precision) 140ms both;
+}
+
+.scrubberHead {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: var(--space-3);
+}
+
+.scrubberLabel {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.14em;
+	color: var(--muted);
+	text-transform: uppercase;
+}
+
+.scrubberValue {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 4px;
+	font-family: var(--font-display);
+	font-size: 28px;
+	font-weight: 400;
+		font-variant-numeric: tabular-nums;
+	letter-spacing: -0.02em;
+	color: var(--fg);
+}
+
+.scrubberUnit {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	font-weight: 400;
+	color: var(--muted);
+	margin-left: 2px;
+}
+
+.scrubberInput {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 100%;
+	height: 2px;
+	background: var(--hairline-strong);
+	border-radius: 999px;
+	cursor: pointer;
+}
+
+.scrubberInput::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 14px;
+	height: 14px;
+	border-radius: 999px;
+	background: var(--accent);
+	box-shadow:
+		0 0 0 4px var(--bg-elev),
+		0 0 0 5px var(--accent),
+		0 0 18px var(--accent-glow);
+	cursor: pointer;
+	transition: transform var(--dur-fast) var(--ease-precision);
+}
+.scrubberInput::-webkit-slider-thumb:hover {
+	transform: scale(1.15);
+}
+.scrubberInput::-moz-range-thumb {
+	width: 14px;
+	height: 14px;
+	border-radius: 999px;
+	background: var(--accent);
+	border: 4px solid var(--bg-elev);
+	box-shadow:
+		0 0 0 1px var(--accent),
+		0 0 18px var(--accent-glow);
+	cursor: pointer;
+}
+
+.scrubberTicks {
+	position: relative;
+	height: 28px;
+	margin-top: 6px;
+}
+
+.tick {
+	position: absolute;
+	left: var(--tick-pos);
+	top: 0;
+	transform: translateX(-50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	padding: 0;
+	cursor: pointer;
+}
+
+.tickMark {
+	width: 1px;
+	height: 6px;
+	background: var(--hairline-strong);
+	transition: background var(--dur-fast) var(--ease-precision);
+}
+
+.tickLabel {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	color: var(--subtle);
+	transition: color var(--dur-fast) var(--ease-precision);
+	font-variant-numeric: tabular-nums;
+}
+
+.tick:hover .tickMark,
+.tickActive .tickMark {
+	background: var(--accent);
+}
+.tick:hover .tickLabel,
+.tickActive .tickLabel {
+	color: var(--fg);
+}
+
+/* ── Properties — compact header card; code is the hero ─────────────── */
+.properties {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	padding: var(--space-4);
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-3);
+	background: var(--bg-elev);
+	min-height: 132px;
+	animation: fade-up var(--dur-slow) var(--ease-precision) 60ms both;
+}
+
+.propsHead {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.propsLabel {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--muted);
+}
+
+.propsCopy {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 9px 4px 7px;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	font-weight: 500;
+	letter-spacing: 0.1em;
+	color: var(--muted);
+	border: 1px solid var(--hairline-strong);
+	border-radius: 999px;
+	transition:
+		color var(--dur-fast) var(--ease-precision),
+		border-color var(--dur-fast) var(--ease-precision),
+		background var(--dur-fast) var(--ease-precision);
+}
+.propsCopy:hover {
+	color: var(--fg);
+	border-color: var(--accent);
+}
+.propsCopy:active {
+	transform: scale(0.96);
+}
+.propsCopy[data-state="copied"] {
+	color: #fff;
+	background: var(--accent);
+	border-color: var(--accent);
+}
+
+.propsCode {
+	font-family: var(--font-display);
+	font-size: 38px;
+	font-weight: 400;
+	letter-spacing: -0.02em;
+	line-height: 1;
+	color: var(--fg);
+	font-variant-numeric: tabular-nums;
+	padding: 2px 0;
+	animation: glyph-pop 300ms var(--ease-precision);
+}
+
+.propsMeta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 14px;
+	padding-top: var(--space-3);
+	margin-top: auto;
+	border-top: 1px solid var(--hairline);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--muted);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.01em;
+}
+
+.metaItem {
+	position: relative;
+}
+.metaItem + .metaItem::before {
+	content: "·";
+	position: absolute;
+	left: -10px;
+	color: var(--subtle);
+}
+
+/* ── Number flip ─────────────────────────────────────────────────────── */
+.flipNum {
+	display: inline-flex;
+	font-variant-numeric: tabular-nums;
+}
+.flipDigit {
+	display: inline-block;
+	animation: digit-slide-up 260ms var(--ease-precision);
+}
+
+/* ── Snippet ─────────────────────────────────────────────────────────── */
+.snippet {
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-3);
+	background: var(--bg-elev);
+	overflow: hidden;
+	animation: fade-up var(--dur-slow) var(--ease-precision) 220ms both;
+}
+
+.snippetHead {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-2) var(--space-4);
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--muted);
+	border-bottom: 1px solid var(--hairline);
+}
+
+.copyBtn {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.12em;
+	color: var(--muted);
+	padding: 4px 8px;
+	border: 1px solid var(--hairline-strong);
+	border-radius: 999px;
+	transition:
+		color var(--dur-fast) var(--ease-precision),
+		border-color var(--dur-fast) var(--ease-precision),
+		background var(--dur-fast) var(--ease-precision);
+}
+.copyBtn:hover {
+	color: var(--fg);
+	border-color: var(--accent);
+}
+.copyBtn[data-state="copied"] {
+	color: var(--bg);
+	background: var(--accent);
+	border-color: var(--accent);
+}
+
+.snippetBody {
+	margin: 0;
+	padding: var(--space-4);
+	font-family: var(--font-mono);
+	font-size: 12px;
+	line-height: 1.6;
+	color: var(--fg);
+	background: var(--bg-deep);
+	overflow-x: auto;
+}
+
+.synTag {
+	color: var(--accent);
+}
+.synAttr {
+	color: var(--fg-strong);
+}
+.synStr {
+	color: var(--muted);
+}
+.synBracket {
+	color: var(--subtle);
+}
+.synBrace {
+	color: var(--accent);
+}
+
+/* ── Section heads (shared by Matrix & Catalog) ──────────────────────── */
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	animation: fade-up var(--dur-slow) var(--ease-precision) 260ms both;
+}
+
+.sectionHead {
+	padding-bottom: var(--space-3);
+	border-bottom: 1px solid var(--hairline);
+}
+
+.sectionTitle {
+	margin: 0;
+	font-family: var(--font-display);
+	font-weight: 400;
+	font-size: 28px;
+	letter-spacing: -0.015em;
+	color: var(--fg);
+	line-height: 1.05;
+}
+
+.sectionDesc {
+	margin: var(--space-2) 0 0;
+	font-size: 13px;
+	color: var(--muted);
+	max-width: 600px;
+}
+
+.sectionDesc em {
+	font-style: normal;
+	color: var(--fg);
+	font-weight: 600;
+}
+
+/* ── Variant matrix ──────────────────────────────────────────────────── */
+.matrix {
+	position: relative;
+	display: grid;
+	grid-template-columns: repeat(8, 1fr);
+	gap: 0;
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-3);
+	overflow: hidden;
+	background: var(--bg-elev);
+}
+
+/* Corner cells get matching radius so the active inset outline follows the
+ * rounded path of the matrix instead of getting clipped at the corners. */
+.matrix .cell:first-child {
+	border-top-left-radius: var(--radius-3);
+}
+.matrix .cell:nth-child(8) {
+	border-top-right-radius: var(--radius-3);
+}
+.matrix .cell:nth-last-child(8) {
+	border-bottom-left-radius: var(--radius-3);
+}
+.matrix .cell:last-child {
+	border-bottom-right-radius: var(--radius-3);
+}
+
+@media (max-width: 1280px) {
+	.matrix {
+		grid-template-columns: repeat(4, 1fr);
+	}
+	/* Reset 8-col corners, set 4-col corners */
+	.matrix .cell:nth-child(8) {
+		border-top-right-radius: 0;
+	}
+	.matrix .cell:nth-last-child(8) {
+		border-bottom-left-radius: 0;
+	}
+	.matrix .cell:nth-child(4) {
+		border-top-right-radius: var(--radius-3);
+	}
+	.matrix .cell:nth-last-child(4) {
+		border-bottom-left-radius: var(--radius-3);
+	}
+}
+
+.cell {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-start;
+	gap: var(--space-3);
+	padding: var(--space-5) var(--space-3) var(--space-3);
+	min-height: 116px;
+	border-right: 1px solid var(--hairline);
+	border-bottom: 1px solid var(--hairline);
+	background: transparent;
+	transition:
+		background var(--dur-fast) var(--ease-precision),
+		color var(--dur-fast) var(--ease-precision);
+	animation: fade-up var(--dur-slow) var(--ease-precision) both;
+	cursor: pointer;
+	overflow: hidden;
+}
+
+.cell:hover {
+	background: var(--bg-deep);
+}
+
+.cellActive {
+	background: var(--bg-deep);
+	box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.cellGlyph {
+	color: var(--fg);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 36px;
+	width: 36px;
+}
+.cellActive .cellGlyph {
+	color: var(--accent);
+}
+
+.cellMeta {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	min-width: 0;
+	width: 100%;
+}
+
+.cellFamily {
+	font-family: var(--font-ui);
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--fg);
+	text-align: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	width: 100%;
+}
+
+.cellStyle {
+	font-family: var(--font-mono);
+	font-size: 9.5px;
+	letter-spacing: 0.06em;
+	color: var(--subtle);
+	text-transform: uppercase;
+}
+
+/* ── Glyph catalog ───────────────────────────────────────────────────── */
+.catalogSearch {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-4);
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-3);
+	background: var(--bg-elev);
+	transition: border-color var(--dur-base) var(--ease-precision);
+}
+.catalogSearch:focus-within {
+	border-color: var(--accent);
+}
+
+.searchIcon {
+	color: var(--muted);
+	flex-shrink: 0;
+}
+
+.catalogInput {
+	flex: 1;
+	font-size: 14px;
+	color: var(--fg);
+}
+.catalogInput::placeholder {
+	color: var(--subtle);
+}
+
+.catalogCount {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--muted);
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+}
+
+.catalog {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+	gap: 0;
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-3);
+	background: var(--bg-elev);
+	overflow: hidden;
+}
+
+.glyphCell {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	padding: var(--space-4) var(--space-3);
+	min-height: 100px;
+	border-right: 1px solid var(--hairline);
+	border-bottom: 1px solid var(--hairline);
+	transition:
+		background var(--dur-fast) var(--ease-precision),
+		color var(--dur-fast) var(--ease-precision);
+	animation: fade-up var(--dur-slow) var(--ease-precision) both;
+	cursor: pointer;
+	color: var(--fg);
+}
+
+.glyphCell:hover {
+	background: var(--bg-deep);
+}
+
+.glyphCellActive {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+
+.glyphCellIcon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 28px;
+}
+
+.glyphCellCode {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--muted);
+	letter-spacing: 0.04em;
+}
+
+.glyphCellName {
+	font-family: var(--font-ui);
+	font-size: 10.5px;
+	color: var(--subtle);
+	text-align: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+}
+
+.glyphCellActive .glyphCellCode,
+.glyphCellActive .glyphCellName {
+	color: var(--accent);
+}
+
+.catalogEmpty {
+	grid-column: 1 / -1;
+	padding: var(--space-12);
+	text-align: center;
+	font-family: var(--font-display);
+	font-size: 18px;
+	color: var(--muted);
+}
+.catalogEmpty em {
+	color: var(--accent);
+	font-style: italic;
+	font-family: var(--font-display);
+}

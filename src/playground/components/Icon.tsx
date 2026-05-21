@@ -1,260 +1,603 @@
-import { useState } from "react";
 import {
-	Icon,
-	ICON_SET,
-	type TIconProps,
-} from "../../components/Icon/Icon";
-import styles from "../Playground.module.css";
+	type CSSProperties,
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
+import { Icon, type TIconProps } from "../../components/Icon/Icon";
+import styles from "./Icon.module.css";
 
-const EXAMPLE_ICONS = [
-	"f007", // user
-	"f015", // home
-	"f013", // cog
-	"f002", // search
-	"f054", // chevron-right
-	"f067", // plus
-	"f00c", // check
-	"f00d", // xmark
-	"f0e0", // envelope
-	"f095", // phone
-];
+/* ────────────────────────────────────────────────────────────────────
+ * Family-style catalog. Mirrors fa.css. Tabular order for the matrix.
+ * ──────────────────────────────────────────────────────────────────── */
 
 type TSet = NonNullable<TIconProps["set"]>;
 type TType = NonNullable<TIconProps["type"]>;
-
-const SET_LABEL: Record<TSet, string> = {
-	classic: "Classic",
-	duotone: "Duotone",
-	sharp: "Sharp",
-	"sharp-duotone": "Sharp Duotone",
-	brand: "Brand",
-	chisel: "Chisel",
-	etch: "Etch",
-	graphite: "Graphite",
-	jelly: "Jelly",
-	"jelly-duo": "Jelly Duo",
-	"jelly-fill": "Jelly Fill",
-	notdog: "Notdog",
-	"notdog-duo": "Notdog Duo",
-	slab: "Slab",
-	"slab-press": "Slab Press",
-	thumbprint: "Thumbprint",
-	whiteboard: "Whiteboard",
-	utility: "Utility",
-	"utility-duo": "Utility Duo",
-	"utility-fill": "Utility Fill",
+type Variant = {
+	set: TSet;
+	type?: TType;
+	family: string;
+	style: string;
+	weight: 100 | 300 | 400 | 600 | 900;
 };
 
-const STANDARD_TYPES = ["thin", "light", "regular", "solid"] as const;
-
-const SET_TYPES: Record<TSet, readonly TType[]> = {
-	classic: STANDARD_TYPES,
-	duotone: STANDARD_TYPES,
-	sharp: STANDARD_TYPES,
-	"sharp-duotone": STANDARD_TYPES,
-	brand: [],
-	chisel: ["regular"],
-	etch: ["solid"],
-	graphite: ["thin"],
-	jelly: ["regular"],
-	"jelly-duo": ["regular"],
-	"jelly-fill": ["regular"],
-	notdog: ["solid"],
-	"notdog-duo": ["solid"],
-	slab: ["regular"],
-	"slab-press": ["regular"],
-	thumbprint: ["light"],
-	whiteboard: ["semibold"],
-	utility: ["semibold"],
-	"utility-duo": ["semibold"],
-	"utility-fill": ["semibold"],
-};
-
-const SET_GROUPS: { label: string; sets: TSet[] }[] = [
-	{
-		label: "Classic & Duotone",
-		sets: ["classic", "duotone", "sharp", "sharp-duotone"],
-	},
-	{ label: "Brand", sets: ["brand"] },
-	{ label: "Chisel / Etch / Graphite", sets: ["chisel", "etch", "graphite"] },
-	{ label: "Jelly", sets: ["jelly", "jelly-duo", "jelly-fill"] },
-	{ label: "Notdog", sets: ["notdog", "notdog-duo"] },
-	{ label: "Slab", sets: ["slab", "slab-press"] },
-	{ label: "Thumbprint / Whiteboard", sets: ["thumbprint", "whiteboard"] },
-	{ label: "Utility", sets: ["utility", "utility-duo", "utility-fill"] },
+const VARIANTS: Variant[] = [
+	// Row 1 — Classic & Duotone (8)
+	{ set: "classic", type: "thin", family: "Classic", style: "Thin", weight: 100 },
+	{ set: "classic", type: "light", family: "Classic", style: "Light", weight: 300 },
+	{ set: "classic", type: "regular", family: "Classic", style: "Regular", weight: 400 },
+	{ set: "classic", type: "solid", family: "Classic", style: "Solid", weight: 900 },
+	{ set: "duotone", type: "thin", family: "Duotone", style: "Thin", weight: 100 },
+	{ set: "duotone", type: "light", family: "Duotone", style: "Light", weight: 300 },
+	{ set: "duotone", type: "regular", family: "Duotone", style: "Regular", weight: 400 },
+	{ set: "duotone", type: "solid", family: "Duotone", style: "Solid", weight: 900 },
+	// Row 2 — Sharp & Sharp Duotone (8)
+	{ set: "sharp", type: "thin", family: "Sharp", style: "Thin", weight: 100 },
+	{ set: "sharp", type: "light", family: "Sharp", style: "Light", weight: 300 },
+	{ set: "sharp", type: "regular", family: "Sharp", style: "Regular", weight: 400 },
+	{ set: "sharp", type: "solid", family: "Sharp", style: "Solid", weight: 900 },
+	{ set: "sharp-duotone", type: "thin", family: "Sharp Duotone", style: "Thin", weight: 100 },
+	{ set: "sharp-duotone", type: "light", family: "Sharp Duotone", style: "Light", weight: 300 },
+	{ set: "sharp-duotone", type: "regular", family: "Sharp Duotone", style: "Regular", weight: 400 },
+	{ set: "sharp-duotone", type: "solid", family: "Sharp Duotone", style: "Solid", weight: 900 },
+	// Row 3 — Style families (8)
+	{ set: "brand", family: "Brand", style: "", weight: 400 },
+	{ set: "chisel", type: "regular", family: "Chisel", style: "Regular", weight: 400 },
+	{ set: "etch", type: "solid", family: "Etch", style: "Solid", weight: 900 },
+	{ set: "graphite", type: "thin", family: "Graphite", style: "Thin", weight: 100 },
+	{ set: "thumbprint", type: "light", family: "Thumbprint", style: "Light", weight: 300 },
+	{ set: "whiteboard", type: "semibold", family: "Whiteboard", style: "Semibold", weight: 600 },
+	{ set: "jelly", type: "regular", family: "Jelly", style: "Regular", weight: 400 },
+	{ set: "jelly-duo", type: "regular", family: "Jelly Duo", style: "Regular", weight: 400 },
+	// Row 4 — More style families (8)
+	{ set: "jelly-fill", type: "regular", family: "Jelly Fill", style: "Regular", weight: 400 },
+	{ set: "notdog", type: "solid", family: "Notdog", style: "Solid", weight: 900 },
+	{ set: "notdog-duo", type: "solid", family: "Notdog Duo", style: "Solid", weight: 900 },
+	{ set: "slab", type: "regular", family: "Slab", style: "Regular", weight: 400 },
+	{ set: "slab-press", type: "regular", family: "Slab Press", style: "Regular", weight: 400 },
+	{ set: "utility", type: "semibold", family: "Utility", style: "Semibold", weight: 600 },
+	{ set: "utility-duo", type: "semibold", family: "Utility Duo", style: "Semibold", weight: 600 },
+	{ set: "utility-fill", type: "semibold", family: "Utility Fill", style: "Semibold", weight: 600 },
 ];
 
-export const IconPlayground = () => {
+/* ────────────────────────────────────────────────────────────────────
+ * Curated popular glyphs (codes from FA v7 Pro).
+ * ──────────────────────────────────────────────────────────────────── */
+
+const POPULAR_GLYPHS: { code: string; name: string }[] = [
+	{ code: "f007", name: "user" },
+	{ code: "f015", name: "home" },
+	{ code: "f013", name: "gear" },
+	{ code: "f002", name: "search" },
+	{ code: "f067", name: "plus" },
+	{ code: "f068", name: "minus" },
+	{ code: "f00c", name: "check" },
+	{ code: "f00d", name: "xmark" },
+	{ code: "f0e0", name: "envelope" },
+	{ code: "f095", name: "phone" },
+	{ code: "f053", name: "chevron-left" },
+	{ code: "f054", name: "chevron-right" },
+	{ code: "f077", name: "chevron-up" },
+	{ code: "f078", name: "chevron-down" },
+	{ code: "f0c9", name: "bars" },
+	{ code: "f0c5", name: "copy" },
+	{ code: "f1f8", name: "trash-can" },
+	{ code: "f044", name: "pen" },
+	{ code: "f0c7", name: "floppy-disk" },
+	{ code: "f019", name: "download" },
+	{ code: "f093", name: "upload" },
+	{ code: "f04b", name: "play" },
+	{ code: "f04c", name: "pause" },
+	{ code: "f04d", name: "stop" },
+	{ code: "f028", name: "volume-high" },
+	{ code: "f005", name: "star" },
+	{ code: "f004", name: "heart" },
+	{ code: "f165", name: "thumbs-up" },
+	{ code: "f164", name: "thumbs-down" },
+	{ code: "f02e", name: "bookmark" },
+	{ code: "f071", name: "triangle-exclam" },
+	{ code: "f06a", name: "circle-exclam" },
+	{ code: "f05a", name: "circle-info" },
+	{ code: "f058", name: "circle-check" },
+	{ code: "f06e", name: "eye" },
+	{ code: "f070", name: "eye-slash" },
+	{ code: "f02d", name: "book" },
+	{ code: "f15c", name: "file-lines" },
+	{ code: "f07b", name: "folder" },
+	{ code: "f07c", name: "folder-open" },
+	{ code: "f1e5", name: "newspaper" },
+	{ code: "f0a1", name: "bullhorn" },
+	{ code: "f185", name: "sun" },
+	{ code: "f186", name: "moon" },
+	{ code: "f0eb", name: "lightbulb" },
+	{ code: "f155", name: "dollar" },
+	{ code: "e1bc", name: "indian-rupee" },
+	{ code: "f17b", name: "android" },
+	{ code: "f179", name: "apple" },
+	{ code: "f3ed", name: "shield" },
+	{ code: "f021", name: "rotate" },
+	{ code: "f0ad", name: "wrench" },
+	{ code: "f005", name: "star" },
+	{ code: "f1da", name: "clock-rotate" },
+	{ code: "f0d0", name: "wand-magic" },
+	{ code: "f3c5", name: "map-marker" },
+	{ code: "f24e", name: "scale-balanced" },
+	{ code: "f4ff", name: "tags" },
+	{ code: "f02f", name: "print" },
+	{ code: "f0c0", name: "users" },
+	{ code: "f06c", name: "leaf" },
+	{ code: "f0e7", name: "bolt" },
+	{ code: "f0a3", name: "certificate" },
+];
+
+/* ────────────────────────────────────────────────────────────────────
+ * Workbench
+ * ──────────────────────────────────────────────────────────────────── */
+
+export const IconWorkbench = () => {
 	const [code, setCode] = useState("f007");
-	const [set, setSet] = useState<TSet>("classic");
-	const [type, setType] = useState<TType | undefined>("regular");
-	const [size, setSize] = useState<number>(24);
+	const [activeIdx, setActiveIdx] = useState(2); // classic / regular
+	const [size, setSize] = useState(96);
+	const [query, setQuery] = useState("");
 
-	const validTypes = SET_TYPES[set];
-	const typeDisabled = validTypes.length <= 1;
+	const active = VARIANTS[activeIdx];
 
-	const handleSetChange = (next: TSet) => {
-		setSet(next);
-		const nextTypes = SET_TYPES[next];
-		if (nextTypes.length === 0) {
-			setType(undefined);
-		} else if (!type || !nextTypes.includes(type)) {
-			setType(nextTypes[0]);
-		}
-	};
+	const filtered = useMemo(() => {
+		if (!query.trim()) return POPULAR_GLYPHS;
+		const q = query.toLowerCase().trim();
+		return POPULAR_GLYPHS.filter(
+			(g) => g.code.includes(q) || g.name.includes(q)
+		);
+	}, [query]);
 
-	const iconProps = {
-		code,
-		set,
-		type,
-		style: { ["--iconSize" as string]: `${size}px` },
-	} as TIconProps;
+	const iconProps = useMemo(
+		() =>
+			({
+				code,
+				set: active.set,
+				type: active.type,
+				style: { ["--iconSize" as string]: `${size}px` },
+			}) as TIconProps,
+		[code, active, size]
+	);
 
 	return (
-		<div className={styles.card}>
-			<div className={styles.header}>
-				<h2 className={styles.title}>Icon Component</h2>
-				<p className={styles.subtitle}>Test and preview font icons</p>
+		<div className={styles.workbench}>
+			<aside className={styles.sidebar}>
+				<Properties
+					code={code}
+					family={active.family}
+					style={active.style}
+					weight={active.weight}
+					size={size}
+				/>
+				<Stage iconProps={iconProps} />
+				<SizeScrubber size={size} onChange={setSize} />
+				<Snippet code={code} set={active.set} type={active.type} size={size} />
+			</aside>
+
+			<section className={styles.canvas}>
+				<VariantMatrix
+					code={code}
+					activeIdx={activeIdx}
+					onPick={setActiveIdx}
+				/>
+				<GlyphCatalog
+					glyphs={filtered}
+					total={POPULAR_GLYPHS.length}
+					query={query}
+					onQuery={setQuery}
+					activeCode={code}
+					activeVariant={active}
+					onPick={setCode}
+				/>
+			</section>
+		</div>
+	);
+};
+
+/* ────────────────────────────────────────────────────────────────────
+ * Stage — split-bg hero glyph (light ↔ dark halves)
+ * ──────────────────────────────────────────────────────────────────── */
+
+const Stage = ({ iconProps }: { iconProps: TIconProps }) => {
+	const [bumpKey, setBumpKey] = useState(0);
+
+	// Re-key on variant/code/size change to retrigger the pop animation.
+	useEffect(() => {
+		setBumpKey((k) => k + 1);
+	}, [iconProps.code, iconProps.set, iconProps.type]);
+
+	return (
+		<div className={styles.stage}>
+			<div className={styles.stageMarks} aria-hidden="true">
+				<span>PREVIEW</span>
+				<span>{(iconProps as { code: string }).code}</span>
 			</div>
-
-			<div className={styles.controls}>
-				<div className={styles.controlGroup}>
-					<label className={styles.label} htmlFor="icon-code">
-						Unicode
-					</label>
-					<input
-						className={styles.input}
-						id="icon-code"
-						onChange={(e) => setCode(e.target.value)}
-						value={code}
-					/>
+			<div className={styles.stageCanvas}>
+				<div className={styles.stageGrid} aria-hidden="true" />
+				<div className={styles.stageGlyph} key={`g-${bumpKey}`}>
+					<Icon {...iconProps} />
 				</div>
+			</div>
+		</div>
+	);
+};
 
-				<div className={styles.controlGroup}>
-					<label className={styles.label} htmlFor="icon-set">
-						Set
-					</label>
-					<select
-						className={styles.select}
-						id="icon-set"
-						onChange={(e) => handleSetChange(e.target.value as TSet)}
-						value={set}
-					>
-						{SET_GROUPS.map((group) => (
-							<optgroup key={group.label} label={group.label}>
-								{group.sets.map((s) => (
-									<option key={s} value={s}>
-										{SET_LABEL[s]}
-									</option>
-								))}
-							</optgroup>
-						))}
-					</select>
-				</div>
+/* ────────────────────────────────────────────────────────────────────
+ * Size scrubber — custom range with tick marks
+ * ──────────────────────────────────────────────────────────────────── */
 
-				<div className={styles.controlGroup}>
-					<label className={styles.label} htmlFor="icon-type">
-						Type
-					</label>
-					<select
-						className={styles.select}
-						disabled={typeDisabled}
-						id="icon-type"
-						onChange={(e) => setType(e.target.value as TType)}
-						value={type ?? ""}
+const SizeScrubber = ({
+	size,
+	onChange,
+}: {
+	size: number;
+	onChange: (n: number) => void;
+}) => {
+	const ticks = [16, 24, 32, 48, 64, 96, 128, 160, 200];
+	return (
+		<div className={styles.scrubber}>
+			<div className={styles.scrubberHead}>
+				<span className={styles.scrubberLabel}>Size</span>
+				<span className={styles.scrubberValue}>
+					<NumberFlip value={size} />
+					<span className={styles.scrubberUnit}>px</span>
+				</span>
+			</div>
+			<input
+				type="range"
+				min={12}
+				max={240}
+				step={1}
+				value={size}
+				onChange={(e) => onChange(Number(e.target.value))}
+				className={styles.scrubberInput}
+				aria-label="Icon size"
+			/>
+			<div className={styles.scrubberTicks} aria-hidden="true">
+				{ticks.map((t) => (
+					<button
+						key={t}
+						type="button"
+						className={`${styles.tick} ${size === t ? styles.tickActive : ""}`}
+						onClick={() => onChange(t)}
+						style={
+							{ "--tick-pos": `${((t - 12) / (240 - 12)) * 100}%` } as CSSProperties
+						}
 					>
-						{validTypes.length === 0 ? (
-							<option value="">—</option>
+						<span className={styles.tickMark} />
+						<span className={styles.tickLabel}>{t}</span>
+					</button>
+				))}
+			</div>
+		</div>
+	);
+};
+
+/* ────────────────────────────────────────────────────────────────────
+ * Tabular number that flips digit-by-digit on change.
+ * ──────────────────────────────────────────────────────────────────── */
+
+const NumberFlip = ({ value }: { value: number | string }) => {
+	const str = String(value);
+	return (
+		<span className={styles.flipNum}>
+			{str.split("").map((ch, i) => (
+				<span key={`${i}-${ch}`} className={styles.flipDigit}>
+					{ch}
+				</span>
+			))}
+		</span>
+	);
+};
+
+/* ────────────────────────────────────────────────────────────────────
+ * Properties — compact header card. Code is the hero; everything else
+ * is a single mono line. Copy button copies just the unicode code.
+ * ──────────────────────────────────────────────────────────────────── */
+
+const Properties = ({
+	code,
+	family,
+	style,
+	weight,
+	size,
+}: {
+	code: string;
+	family: string;
+	style: string;
+	weight: number | string;
+	size: number;
+}) => {
+	const [copied, setCopied] = useState(false);
+
+	const onCopy = useCallback(async () => {
+		try {
+			await navigator.clipboard.writeText(code);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 1400);
+		} catch {}
+	}, [code]);
+
+	const metaParts = [family, style, String(weight), `${size}px`].filter(Boolean);
+
+	return (
+		<div className={styles.properties}>
+			<div className={styles.propsHead}>
+				<span className={styles.propsLabel}>CODE</span>
+				<button
+					type="button"
+					onClick={onCopy}
+					data-state={copied ? "copied" : "idle"}
+					className={styles.propsCopy}
+					aria-label="Copy unicode code"
+				>
+					<svg
+						width="11"
+						height="11"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="1.4"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						aria-hidden="true"
+					>
+						{copied ? (
+							<path d="M3 8.5 L6.5 12 L13 4" />
 						) : (
-							validTypes.map((t) => (
-								<option key={t} value={t}>
-									{t.charAt(0).toUpperCase() + t.slice(1)}
-								</option>
-							))
+							<>
+								<rect x="5" y="5" width="9" height="9" rx="1.5" />
+								<path d="M3 11 L2.5 11 A1 1 0 0 1 2 10 L2 3 A1 1 0 0 1 3 2 L10 2 A1 1 0 0 1 11 3 L11 3.5" />
+							</>
 						)}
-					</select>
-				</div>
-
-				<div className={styles.controlGroup}>
-					<label className={styles.label} htmlFor="icon-size">
-						Size (px)
-					</label>
-					<input
-						className={styles.input}
-						id="icon-size"
-						onChange={(e) => setSize(Number(e.target.value) || 0)}
-						type="number"
-						value={size}
-					/>
-				</div>
+					</svg>
+					<span>{copied ? "COPIED" : "COPY"}</span>
+				</button>
 			</div>
-
-			<div className={styles.previewArea}>
-				<Icon {...iconProps} />
+			<div className={styles.propsCode} key={code}>
+				{code}
 			</div>
+			<div className={styles.propsMeta}>
+				{metaParts.map((part, i) => (
+					<span key={`${part}-${i}`} className={styles.metaItem}>
+						{part}
+					</span>
+				))}
+			</div>
+		</div>
+	);
+};
 
-			<div style={{ marginTop: 40 }}>
-				<h3 className={styles.title} style={{ fontSize: 18 }}>
-					Examples
-				</h3>
-				<div className={styles.grid}>
-					{EXAMPLE_ICONS.map((iconCode) => (
+/* ────────────────────────────────────────────────────────────────────
+ * Snippet — copy-on-click JSX block
+ * ──────────────────────────────────────────────────────────────────── */
+
+const Snippet = ({
+	code,
+	set,
+	type,
+	size,
+}: {
+	code: string;
+	set: TSet;
+	type?: TType;
+	size: number;
+}) => {
+	const [copied, setCopied] = useState(false);
+	const text =
+		set === "classic" && (!type || type === "regular")
+			? `<Icon\n  code="${code}"\n  className="ico-${Math.round(size / 4)}"\n/>`
+			: set === "brand"
+				? `<Icon\n  code="${code}"\n  set="brand"\n  className="ico-${Math.round(size / 4)}"\n/>`
+				: type
+					? `<Icon\n  code="${code}"\n  set="${set}"\n  type="${type}"\n  className="ico-${Math.round(size / 4)}"\n/>`
+					: `<Icon\n  code="${code}"\n  set="${set}"\n  className="ico-${Math.round(size / 4)}"\n/>`;
+
+	const onCopy = useCallback(async () => {
+		await navigator.clipboard.writeText(text);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 1400);
+	}, [text]);
+
+	return (
+		<div className={styles.snippet}>
+			<div className={styles.snippetHead}>
+				<span>CODE</span>
+				<button
+					type="button"
+					onClick={onCopy}
+					className={styles.copyBtn}
+					data-state={copied ? "copied" : "idle"}
+				>
+					{copied ? "COPIED" : "COPY"}
+				</button>
+			</div>
+			<pre className={styles.snippetBody}>
+				<code>{colorize(text)}</code>
+			</pre>
+		</div>
+	);
+};
+
+const colorize = (src: string): ReactNode[] => {
+	const out: ReactNode[] = [];
+	const re = /(<\/?[A-Za-z]+)|(\/?>)|(\b[a-z][\w-]*=)|("[^"]*")|(\{|\})/g;
+	let m: RegExpExecArray | null;
+	let last = 0;
+	while ((m = re.exec(src)) !== null) {
+		if (m.index > last) {
+			out.push(src.slice(last, m.index));
+		}
+		const t = m[0];
+		const cls = m[1]
+			? styles.synTag
+			: m[2]
+				? styles.synBracket
+				: m[3]
+					? styles.synAttr
+					: m[4]
+						? styles.synStr
+						: styles.synBrace;
+		out.push(
+			<span key={m.index} className={cls}>
+				{t}
+			</span>
+		);
+		last = re.lastIndex;
+	}
+	if (last < src.length) out.push(src.slice(last));
+	return out;
+};
+
+/* ────────────────────────────────────────────────────────────────────
+ * Variant matrix — current glyph across all 32 family-styles
+ * ──────────────────────────────────────────────────────────────────── */
+
+const VariantMatrix = ({
+	code,
+	activeIdx,
+	onPick,
+}: {
+	code: string;
+	activeIdx: number;
+	onPick: (idx: number) => void;
+}) => {
+	return (
+		<div className={styles.section}>
+			<header className={styles.sectionHead}>
+				<h2 className={styles.sectionTitle}>Variants</h2>
+				<p className={styles.sectionDesc}>
+					Selected glyph rendered across{" "}
+					<NumberFlip value={VARIANTS.length} /> available styles.
+				</p>
+			</header>
+			<div className={styles.matrix}>
+				{VARIANTS.map((v, idx) => (
+					<button
+						type="button"
+						key={`${v.set}-${v.type ?? "x"}`}
+						className={`${styles.cell} ${idx === activeIdx ? styles.cellActive : ""}`}
+						onClick={() => onPick(idx)}
+						style={
+							{
+								animationDelay: `${idx * 14}ms`,
+							} as CSSProperties
+						}
+					>
+						<div className={styles.cellGlyph}>
+							<Icon
+								{...({
+									code,
+									set: v.set,
+									type: v.type,
+									style: { ["--iconSize" as string]: "28px" },
+								} as TIconProps)}
+							/>
+						</div>
+						<div className={styles.cellMeta}>
+							<span className={styles.cellFamily}>{v.family}</span>
+							<span className={styles.cellStyle}>{v.style}</span>
+						</div>
+					</button>
+				))}
+			</div>
+		</div>
+	);
+};
+
+/* ────────────────────────────────────────────────────────────────────
+ * Glyph catalog — dense, searchable popular icons
+ * ──────────────────────────────────────────────────────────────────── */
+
+const GlyphCatalog = ({
+	glyphs,
+	total,
+	query,
+	onQuery,
+	activeCode,
+	activeVariant,
+	onPick,
+}: {
+	glyphs: { code: string; name: string }[];
+	total: number;
+	query: string;
+	onQuery: (q: string) => void;
+	activeCode: string;
+	activeVariant: Variant;
+	onPick: (c: string) => void;
+}) => {
+	return (
+		<div className={styles.section}>
+			<header className={styles.sectionHead}>
+				<h2 className={styles.sectionTitle}>Glyphs</h2>
+				<p className={styles.sectionDesc}>
+					<NumberFlip value={total} /> common glyphs in{" "}
+					<em>
+						{activeVariant.family} {activeVariant.style}
+					</em>
+					.
+				</p>
+			</header>
+			<div className={styles.catalogSearch}>
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 16 16"
+					aria-hidden="true"
+					className={styles.searchIcon}
+				>
+					<circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" />
+					<line x1="11" y1="11" x2="14" y2="14" stroke="currentColor" />
+				</svg>
+				<input
+					type="text"
+					value={query}
+					onChange={(e) => onQuery(e.target.value)}
+					placeholder="Filter by name or unicode hex…"
+					className={styles.catalogInput}
+				/>
+				<span className={styles.catalogCount}>
+					<NumberFlip value={glyphs.length} />/<NumberFlip value={total} />
+				</span>
+			</div>
+			<div className={styles.catalog}>
+				{glyphs.length === 0 ? (
+					<div className={styles.catalogEmpty}>
+						No matches for <em>"{query}"</em>
+					</div>
+				) : (
+					glyphs.map((g, idx) => (
 						<button
-							className={styles.gridItem}
-							key={iconCode}
-							onClick={() => setCode(iconCode)}
 							type="button"
+							key={`${g.code}-${idx}`}
+							className={`${styles.glyphCell} ${activeCode === g.code ? styles.glyphCellActive : ""}`}
+							onClick={() => onPick(g.code)}
+							style={
+								{
+									animationDelay: `${Math.min(idx * 8, 400)}ms`,
+								} as CSSProperties
+							}
+							title={`${g.name} · ${g.code}`}
 						>
-							<div className={styles.gridItemIcon}>
+							<div className={styles.glyphCellIcon}>
 								<Icon
 									{...({
-										...iconProps,
-										code: iconCode,
+										code: g.code,
+										set: activeVariant.set,
+										type: activeVariant.type,
+										style: { ["--iconSize" as string]: "22px" },
 									} as TIconProps)}
 								/>
 							</div>
-							<span className={styles.gridItemCode}>
-								{iconCode}
-							</span>
+							<span className={styles.glyphCellCode}>{g.code}</span>
+							<span className={styles.glyphCellName}>{g.name}</span>
 						</button>
-					))}
-				</div>
-			</div>
-
-			<div style={{ marginTop: 40 }}>
-				<h3 className={styles.title} style={{ fontSize: 18 }}>
-					All Sets ({Object.keys(ICON_SET).length})
-				</h3>
-				<div className={styles.grid}>
-					{(Object.keys(ICON_SET) as TSet[]).map((s) => {
-						const t = SET_TYPES[s][0];
-						return (
-							<button
-								className={styles.gridItem}
-								key={s}
-								onClick={() => handleSetChange(s)}
-								type="button"
-							>
-								<div className={styles.gridItemIcon}>
-									<Icon
-										{...({
-											code,
-											set: s,
-											type: t,
-											style: {
-												["--iconSize" as string]:
-													`${size}px`,
-											},
-										} as TIconProps)}
-									/>
-								</div>
-								<span className={styles.gridItemCode}>
-									{SET_LABEL[s]}
-								</span>
-							</button>
-						);
-					})}
-				</div>
+					))
+				)}
 			</div>
 		</div>
 	);

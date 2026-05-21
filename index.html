@@ -1,10 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 	<head>
 		<meta charset="UTF-8" >
 		<link rel="icon" type="image/svg+xml" href="/vite.svg" >
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" >
-		<title>gliff</title>
+		<title>Gliff</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" >
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin >
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Days+One&family=Lexend:wght@100..900&family=Cascadia+Code:ital,wght@0,200..700;1,200..700&display=swap" >
+		<script>
+		"use strict";
+		(() => {
+			try {
+				const t = localStorage.getItem("gliff-theme") || "dark";
+				document.documentElement.setAttribute("data-theme", t);
+			} catch {
+				// Ignore storage access errors and keep the default theme.
+			}
+		})();
+		</script>
 	</head>
 	<body>
 		<div id="root"></div>

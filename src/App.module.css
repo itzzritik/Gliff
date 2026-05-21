@@ -1,0 +1,314 @@
+.app {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+/* ── Chrome ───────────────────────────────────────────────────────────── */
+.chrome {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	align-items: center;
+	height: var(--chrome-h);
+	padding: 0 var(--space-6);
+	background: color-mix(in oklab, var(--bg), transparent 16%);
+	backdrop-filter: saturate(180%) blur(20px);
+	-webkit-backdrop-filter: saturate(180%) blur(20px);
+	border-bottom: 1px solid var(--hairline);
+	animation: fade-up var(--dur-slow) var(--ease-precision) both;
+}
+
+/* ── Brand ────────────────────────────────────────────────────────────
+ * Viewfinder/focus mark + Gliff wordmark + version badge.
+ * Staggered reveal on load. Ambient pulses on the dots. No hover state.
+ * ──────────────────────────────────────────────────────────────────── */
+.brand {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	text-decoration: none;
+	color: inherit;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* — Mark: viewfinder brackets + center dot — */
+.brandMark {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	color: var(--fg);
+}
+
+.brandCorner {
+	transform-box: fill-box;
+	transform-origin: 50% 50%;
+	stroke-dasharray: 14 14;
+	stroke-dashoffset: 14;
+	animation: bracket-draw 540ms var(--ease-precision) both;
+}
+.brandCorner[data-corner="tl"] {
+	animation-delay: 60ms;
+}
+.brandCorner[data-corner="tr"] {
+	animation-delay: 140ms;
+}
+.brandCorner[data-corner="br"] {
+	animation-delay: 220ms;
+}
+.brandCorner[data-corner="bl"] {
+	animation-delay: 300ms;
+}
+
+.brandCore {
+	transform-box: fill-box;
+	transform-origin: 50% 50%;
+	animation:
+		core-pop 460ms var(--ease-precision) 360ms both,
+		core-pulse 2.6s var(--ease-precision) 820ms infinite;
+}
+
+/* — Wordmark — */
+.brandName {
+	display: inline-flex;
+	overflow: hidden;
+	padding: 1px 2px 2px;
+	margin-left: -2px;
+	animation: brand-name-mask 720ms var(--ease-precision) 220ms both;
+}
+
+.brandNameInner {
+	display: inline-block;
+	font-family: var(--font-display);
+	font-weight: 400;
+	font-size: 22px;
+	letter-spacing: -0.025em;
+	color: var(--fg);
+	line-height: 1;
+	animation: brand-name-in 720ms var(--ease-precision) 220ms both;
+}
+
+/* — Hairline divider between wordmark and version — */
+.brandSep {
+	display: inline-block;
+	width: 1px;
+	height: 16px;
+	background: var(--hairline-strong);
+	margin: 0 10px 0 4px;
+	transform-origin: top;
+	animation: sep-grow 480ms var(--ease-precision) 360ms both;
+}
+
+/* — Version — minor key, mono, no container, properly sized to read — */
+.brandVersion {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 0.01em;
+	color: var(--muted);
+	font-variant-numeric: tabular-nums;
+	animation: brand-name-in 620ms var(--ease-precision) 420ms both;
+}
+
+@keyframes sep-grow {
+	from {
+		opacity: 0;
+		transform: scaleY(0);
+	}
+	to {
+		opacity: 1;
+		transform: scaleY(1);
+	}
+}
+
+/* — Animations — */
+@keyframes bracket-draw {
+	0% {
+		stroke-dashoffset: 14;
+		opacity: 0;
+	}
+	30% {
+		opacity: 1;
+	}
+	100% {
+		stroke-dashoffset: 0;
+		opacity: 1;
+	}
+}
+
+@keyframes core-pop {
+	0% {
+		opacity: 0;
+		transform: scale(0.2);
+	}
+	60% {
+		opacity: 1;
+		transform: scale(1.4);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes core-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.55;
+	}
+}
+
+@keyframes brand-name-mask {
+	from {
+		max-width: 0;
+	}
+	to {
+		max-width: 220px;
+	}
+}
+
+@keyframes brand-name-in {
+	from {
+		opacity: 0;
+		transform: translateX(-6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+
+/* Tabs */
+.tabs {
+	position: relative;
+	display: flex;
+	gap: var(--space-2);
+	padding: 4px;
+	border: 1px solid var(--hairline);
+	border-radius: 999px;
+	background: var(--bg-elev);
+}
+
+.tabIndicator {
+	position: absolute;
+	top: 4px;
+	left: 4px;
+	width: calc(50% - 4px);
+	height: calc(100% - 8px);
+	background: var(--fg);
+	border-radius: 999px;
+	transition: transform var(--dur-base) var(--ease-precision);
+	pointer-events: none;
+}
+.tabIndicator[data-tab="lottie"] {
+	transform: translateX(100%);
+}
+
+.tab {
+	position: relative;
+	z-index: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 84px;
+	padding: 6px 18px;
+	font-family: var(--font-ui);
+	font-size: 13px;
+	font-weight: 500;
+	letter-spacing: -0.005em;
+	color: var(--muted);
+	border-radius: 999px;
+	cursor: pointer;
+	user-select: none;
+	-webkit-user-select: none;
+	-webkit-tap-highlight-color: transparent;
+	transition: color var(--dur-base) var(--ease-precision);
+}
+
+/* Only inactive tabs respond to hover. The active tab keeps its bg-colored
+ * text so it stays legible against the indicator pill. */
+.tab:not(.tabActive):hover {
+	color: var(--fg);
+}
+
+.tabActive {
+	color: var(--bg);
+}
+
+/* Meta */
+.meta {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+}
+
+.themeToggle {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border: 1px solid var(--hairline);
+	border-radius: 999px;
+	color: var(--fg);
+	overflow: hidden;
+	transition:
+		border-color var(--dur-base) var(--ease-precision),
+		color var(--dur-base) var(--ease-precision),
+		background var(--dur-base) var(--ease-precision),
+		transform var(--dur-base) var(--ease-precision);
+}
+
+.themeToggle:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+	background: var(--accent-soft);
+}
+
+.themeToggle:active {
+	transform: scale(0.94);
+}
+
+.themeIcon {
+	position: absolute;
+	inset: 0;
+	margin: auto;
+	transition:
+		opacity var(--dur-base) var(--ease-precision),
+		transform var(--dur-slow) var(--ease-precision);
+}
+
+.themeIconSun {
+	opacity: 0;
+	transform: rotate(-90deg) scale(0.4);
+}
+.themeIconMoon {
+	opacity: 1;
+	transform: rotate(0deg) scale(1);
+}
+
+.themeToggle[data-state="dark"] .themeIconSun {
+	opacity: 1;
+	transform: rotate(0deg) scale(1);
+}
+.themeToggle[data-state="dark"] .themeIconMoon {
+	opacity: 0;
+	transform: rotate(90deg) scale(0.4);
+}
+
+/* ── Main ─────────────────────────────────────────────────────────────── */
+.main {
+	flex: 1;
+	min-height: 0;
+	animation: fade-up var(--dur-slow) var(--ease-precision) 80ms both;
+}
