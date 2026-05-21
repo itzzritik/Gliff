@@ -218,21 +218,10 @@ const Specimen = ({
 	weight: number | string;
 }) => {
 	const [bumpKey, setBumpKey] = useState(0);
-	const [copied, setCopied] = useState(false);
 
 	useEffect(() => {
 		setBumpKey((k) => k + 1);
 	}, [iconProps.code, iconProps.set, iconProps.type]);
-
-	const onCopy = useCallback(async () => {
-		try {
-			await navigator.clipboard.writeText(code);
-			setCopied(true);
-			setTimeout(() => setCopied(false), 1400);
-		} catch {
-			// Clipboard permissions can fail in some browser contexts.
-		}
-	}, [code]);
 
 	const metaParts = [family, style, String(weight), `${size}px`].filter(Boolean);
 
@@ -243,35 +232,7 @@ const Specimen = ({
 					<div className={styles.specimenCode} key={code}>
 						{code}
 					</div>
-					<button
-						aria-label="Copy unicode code"
-						className={styles.propsCopy}
-						data-state={copied ? "copied" : "idle"}
-						onClick={onCopy}
-						type="button"
-					>
-						<svg
-							aria-hidden="true"
-							fill="none"
-							height="11"
-							stroke="currentColor"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth="1.4"
-							viewBox="0 0 16 16"
-							width="11"
-						>
-							{copied ? (
-								<path d="M3 8.5 L6.5 12 L13 4" />
-							) : (
-								<>
-									<rect height="9" rx="1.5" width="9" x="5" y="5" />
-									<path d="M3 11 L2.5 11 A1 1 0 0 1 2 10 L2 3 A1 1 0 0 1 3 2 L10 2 A1 1 0 0 1 11 3 L11 3.5" />
-								</>
-							)}
-						</svg>
-						<span>{copied ? "COPIED" : "COPY"}</span>
-					</button>
+					<CopyButton onCopy={() => navigator.clipboard.writeText(code)} />
 				</div>
 				<div className={styles.specimenMeta}>
 					{metaParts.map((part, i) => (
@@ -291,9 +252,63 @@ const Specimen = ({
 	);
 };
 
+const CopyButton = ({
+	onCopy,
+	className,
+}: {
+	onCopy: () => void | Promise<void>;
+	className?: string;
+}) => {
+	const [copied, setCopied] = useState(false);
+	const handleClick = useCallback(async () => {
+		try {
+			await onCopy();
+			setCopied(true);
+			setTimeout(() => setCopied(false), 1400);
+		} catch {}
+	}, [onCopy]);
+
+	return (
+		<button
+			aria-label="Copy"
+			className={`${styles.copyBtn}${className ? ` ${className}` : ""}`}
+			data-state={copied ? "copied" : "idle"}
+			onClick={handleClick}
+			type="button"
+		>
+			<svg
+				aria-hidden="true"
+				className={styles.copyIcon}
+				fill="none"
+				height="12"
+				stroke="currentColor"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				strokeWidth="1.6"
+				viewBox="0 0 16 16"
+				width="12"
+			>
+				{copied ? (
+					<path d="M3.5 8.5 L6.5 11.5 L12.5 5" />
+				) : (
+					<>
+						<rect height="9" rx="1.6" width="9" x="5" y="5" />
+						<path d="M3 11 H2.6 A1 1 0 0 1 1.6 10 V3 A1 1 0 0 1 2.6 2 H10 A1 1 0 0 1 11 3 V3.4" />
+					</>
+				)}
+			</svg>
+			<span className={styles.copyLabel}>COPIED</span>
+		</button>
+	);
+};
+
 /* ────────────────────────────────────────────────────────────────────
  * Size scrubber — custom range with tick marks
  * ──────────────────────────────────────────────────────────────────── */
+
+const SCRUB_MIN = 4;
+const SCRUB_MAX = 256;
+const SCRUB_TICKS = [4, 32, 64, 96, 128, 160, 192, 224, 256];
 
 const SizeScrubber = ({
 	size,
@@ -302,39 +317,49 @@ const SizeScrubber = ({
 	size: number;
 	onChange: (n: number) => void;
 }) => {
-	const ticks = [16, 24, 32, 48, 64, 96, 128, 160, 200];
+	const pct = ((size - SCRUB_MIN) / (SCRUB_MAX - SCRUB_MIN)) * 100;
 	return (
 		<div className={styles.scrubber}>
-			<div className={styles.scrubberHead}>
-				<span className={styles.scrubberLabel}>Size</span>
-				<span className={styles.scrubberValue}>
-					<NumberFlip value={size} />
-					<span className={styles.scrubberUnit}>px</span>
-				</span>
+			<div className={styles.scrubberValue} key={size}>
+				<NumberFlip value={size} />
+				<span className={styles.scrubberUnit}>px</span>
 			</div>
-			<input
-				type="range"
-				min={12}
-				max={240}
-				step={1}
-				value={size}
-				onChange={(e) => onChange(Number(e.target.value))}
-				className={styles.scrubberInput}
-				aria-label="Icon size"
-			/>
+			<div className={styles.scrubberTrack}>
+				<div
+					className={styles.scrubberFill}
+					style={{ width: `${pct}%` }}
+					aria-hidden="true"
+				/>
+				<div
+					className={styles.scrubberThumb}
+					style={{ left: `${pct}%` }}
+					aria-hidden="true"
+				/>
+				<input
+					type="range"
+					min={SCRUB_MIN}
+					max={SCRUB_MAX}
+					step={1}
+					value={size}
+					onChange={(e) => onChange(Number(e.target.value))}
+					className={styles.scrubberInput}
+					aria-label="Icon size"
+				/>
+			</div>
 			<div className={styles.scrubberTicks} aria-hidden="true">
-				{ticks.map((t) => (
+				{SCRUB_TICKS.map((t) => (
 					<button
 						key={t}
 						type="button"
 						className={`${styles.tick} ${size === t ? styles.tickActive : ""}`}
 						onClick={() => onChange(t)}
 						style={
-							{ "--tick-pos": `${((t - 12) / (240 - 12)) * 100}%` } as CSSProperties
+							{
+								"--tick-pos": `${((t - SCRUB_MIN) / (SCRUB_MAX - SCRUB_MIN)) * 100}%`,
+							} as CSSProperties
 						}
 					>
-						<span className={styles.tickMark} />
-						<span className={styles.tickLabel}>{t}</span>
+						{t}
 					</button>
 				))}
 			</div>
@@ -374,7 +399,6 @@ const Snippet = ({
 	type?: TType;
 	size: number;
 }) => {
-	const [copied, setCopied] = useState(false);
 	const text =
 		set === "classic" && (!type || type === "regular")
 			? `<Icon\n  code="${code}"\n  className="ico-${Math.round(size / 4)}"\n/>`
@@ -383,28 +407,25 @@ const Snippet = ({
 				: type
 					? `<Icon\n  code="${code}"\n  set="${set}"\n  type="${type}"\n  className="ico-${Math.round(size / 4)}"\n/>`
 					: `<Icon\n  code="${code}"\n  set="${set}"\n  className="ico-${Math.round(size / 4)}"\n/>`;
-
-	const onCopy = useCallback(async () => {
-		await navigator.clipboard.writeText(text);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 1400);
-	}, [text]);
+	const lines = text.split("\n");
 
 	return (
 		<div className={styles.snippet}>
-			<div className={styles.snippetHead}>
-				<span>CODE</span>
-				<button
-					type="button"
-					onClick={onCopy}
-					className={styles.copyBtn}
-					data-state={copied ? "copied" : "idle"}
-				>
-					{copied ? "COPIED" : "COPY"}
-				</button>
-			</div>
+			<CopyButton
+				className={styles.snippetCopy}
+				onCopy={() => navigator.clipboard.writeText(text)}
+			/>
 			<pre className={styles.snippetBody}>
-				<code>{colorize(text)}</code>
+				<code>
+					{lines.map((line, i) => (
+						<div className={styles.snippetLine} key={i}>
+							<span className={styles.snippetLineNo}>{i + 1}</span>
+							<span className={styles.snippetLineCode}>
+								{colorize(line)}
+							</span>
+						</div>
+					))}
+				</code>
 			</pre>
 		</div>
 	);

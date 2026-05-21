@@ -5,6 +5,9 @@ import { LottieWorkbench } from "./playground/components/Lottie";
 import "./playground/playground.css";
 import { useTheme } from "./playground/useTheme";
 
+declare const __APP_VERSION__: string;
+const VERSION = `v${__APP_VERSION__}`;
+
 type Tab = "icon" | "lottie";
 
 const App = () => {
@@ -17,8 +20,8 @@ const App = () => {
 				<a
 					className={styles.brand}
 					href="/"
-					aria-label="Gliff v0.0.9"
-					title="Gliff · v0.0.9"
+					aria-label={`Gliff ${VERSION}`}
+					title={`Gliff · ${VERSION}`}
 				>
 					<span className={styles.brandMark} aria-hidden="true">
 						<svg
@@ -66,7 +69,7 @@ const App = () => {
 						<span className={styles.brandNameInner}>Gliff</span>
 					</span>
 					<span className={styles.brandSep} aria-hidden="true" />
-					<span className={styles.brandVersion}>v0.0.9</span>
+					<span className={styles.brandVersion}>{VERSION}</span>
 				</a>
 
 				<nav className={styles.tabs} aria-label="Workbench">
