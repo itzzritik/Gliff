@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Icon, type TIconProps } from "../../components/Icon/Icon";
+import {
+	Icon,
+	ICON_SET,
+	type TIconProps,
+} from "../../components/Icon/Icon";
 import styles from "../Playground.module.css";
 
 const EXAMPLE_ICONS = [
@@ -15,11 +19,96 @@ const EXAMPLE_ICONS = [
 	"f095", // phone
 ];
 
+type TSet = NonNullable<TIconProps["set"]>;
+type TType = NonNullable<TIconProps["type"]>;
+
+const SET_LABEL: Record<TSet, string> = {
+	classic: "Classic",
+	duotone: "Duotone",
+	sharp: "Sharp",
+	"sharp-duotone": "Sharp Duotone",
+	brand: "Brand",
+	chisel: "Chisel",
+	etch: "Etch",
+	graphite: "Graphite",
+	jelly: "Jelly",
+	"jelly-duo": "Jelly Duo",
+	"jelly-fill": "Jelly Fill",
+	notdog: "Notdog",
+	"notdog-duo": "Notdog Duo",
+	slab: "Slab",
+	"slab-press": "Slab Press",
+	thumbprint: "Thumbprint",
+	whiteboard: "Whiteboard",
+	utility: "Utility",
+	"utility-duo": "Utility Duo",
+	"utility-fill": "Utility Fill",
+};
+
+const STANDARD_TYPES = ["thin", "light", "regular", "solid"] as const;
+
+const SET_TYPES: Record<TSet, readonly TType[]> = {
+	classic: STANDARD_TYPES,
+	duotone: STANDARD_TYPES,
+	sharp: STANDARD_TYPES,
+	"sharp-duotone": STANDARD_TYPES,
+	brand: [],
+	chisel: ["regular"],
+	etch: ["solid"],
+	graphite: ["thin"],
+	jelly: ["regular"],
+	"jelly-duo": ["regular"],
+	"jelly-fill": ["regular"],
+	notdog: ["solid"],
+	"notdog-duo": ["solid"],
+	slab: ["regular"],
+	"slab-press": ["regular"],
+	thumbprint: ["light"],
+	whiteboard: ["semibold"],
+	utility: ["semibold"],
+	"utility-duo": ["semibold"],
+	"utility-fill": ["semibold"],
+};
+
+const SET_GROUPS: { label: string; sets: TSet[] }[] = [
+	{
+		label: "Classic & Duotone",
+		sets: ["classic", "duotone", "sharp", "sharp-duotone"],
+	},
+	{ label: "Brand", sets: ["brand"] },
+	{ label: "Chisel / Etch / Graphite", sets: ["chisel", "etch", "graphite"] },
+	{ label: "Jelly", sets: ["jelly", "jelly-duo", "jelly-fill"] },
+	{ label: "Notdog", sets: ["notdog", "notdog-duo"] },
+	{ label: "Slab", sets: ["slab", "slab-press"] },
+	{ label: "Thumbprint / Whiteboard", sets: ["thumbprint", "whiteboard"] },
+	{ label: "Utility", sets: ["utility", "utility-duo", "utility-fill"] },
+];
+
 export const IconPlayground = () => {
 	const [code, setCode] = useState("f007");
-	const [set, setSet] = useState<TIconProps["set"]>("classic");
-	const [type, setType] = useState<TIconProps["type"]>("regular");
-	const [size, setSize] = useState<TIconProps["size"]>("default");
+	const [set, setSet] = useState<TSet>("classic");
+	const [type, setType] = useState<TType | undefined>("regular");
+	const [size, setSize] = useState<number>(24);
+
+	const validTypes = SET_TYPES[set];
+	const typeDisabled = validTypes.length <= 1;
+
+	const handleSetChange = (next: TSet) => {
+		setSet(next);
+		const nextTypes = SET_TYPES[next];
+		if (nextTypes.length === 0) {
+			setType(undefined);
+		} else if (!type || !nextTypes.includes(type)) {
+			setType(nextTypes[0]);
+		}
+	};
+
+	const iconProps = {
+		code,
+		set,
+		type,
+		style: { ["--iconSize" as string]: `${size}px` },
+	} as TIconProps;
 
 	return (
 		<div className={styles.card}>
@@ -48,16 +137,18 @@ export const IconPlayground = () => {
 					<select
 						className={styles.select}
 						id="icon-set"
-						onChange={(e) =>
-							setSet(e.target.value as TIconProps["set"])
-						}
+						onChange={(e) => handleSetChange(e.target.value as TSet)}
 						value={set}
 					>
-						<option value="classic">Classic</option>
-						<option value="duotone">Duotone</option>
-						<option value="sharp">Sharp</option>
-						<option value="sharp-duotone">Sharp Duotone</option>
-						<option value="brand">Brand</option>
+						{SET_GROUPS.map((group) => (
+							<optgroup key={group.label} label={group.label}>
+								{group.sets.map((s) => (
+									<option key={s} value={s}>
+										{SET_LABEL[s]}
+									</option>
+								))}
+							</optgroup>
+						))}
 					</select>
 				</div>
 
@@ -67,40 +158,39 @@ export const IconPlayground = () => {
 					</label>
 					<select
 						className={styles.select}
+						disabled={typeDisabled}
 						id="icon-type"
-						onChange={(e) =>
-							setType(e.target.value as TIconProps["type"])
-						}
-						value={type}
+						onChange={(e) => setType(e.target.value as TType)}
+						value={type ?? ""}
 					>
-						<option value="thin">Thin</option>
-						<option value="light">Light</option>
-						<option value="regular">Regular</option>
-						<option value="solid">Solid</option>
+						{validTypes.length === 0 ? (
+							<option value="">—</option>
+						) : (
+							validTypes.map((t) => (
+								<option key={t} value={t}>
+									{t.charAt(0).toUpperCase() + t.slice(1)}
+								</option>
+							))
+						)}
 					</select>
 				</div>
 
 				<div className={styles.controlGroup}>
 					<label className={styles.label} htmlFor="icon-size">
-						Size
+						Size (px)
 					</label>
-					<select
-						className={styles.select}
+					<input
+						className={styles.input}
 						id="icon-size"
-						onChange={(e) =>
-							setSize(e.target.value as TIconProps["size"])
-						}
+						onChange={(e) => setSize(Number(e.target.value) || 0)}
+						type="number"
 						value={size}
-					>
-						<option value="mini">Mini (12px)</option>
-						<option value="default">Default (18px)</option>
-						<option value="large">Large (24px)</option>
-					</select>
+					/>
 				</div>
 			</div>
 
 			<div className={styles.previewArea}>
-				<Icon code={code} set={set} size={size} type={type} />
+				<Icon {...iconProps} />
 			</div>
 
 			<div style={{ marginTop: 40 }}>
@@ -117,10 +207,10 @@ export const IconPlayground = () => {
 						>
 							<div className={styles.gridItemIcon}>
 								<Icon
-									code={iconCode}
-									set={set}
-									size={size}
-									type={type}
+									{...({
+										...iconProps,
+										code: iconCode,
+									} as TIconProps)}
 								/>
 							</div>
 							<span className={styles.gridItemCode}>
@@ -128,6 +218,42 @@ export const IconPlayground = () => {
 							</span>
 						</button>
 					))}
+				</div>
+			</div>
+
+			<div style={{ marginTop: 40 }}>
+				<h3 className={styles.title} style={{ fontSize: 18 }}>
+					All Sets ({Object.keys(ICON_SET).length})
+				</h3>
+				<div className={styles.grid}>
+					{(Object.keys(ICON_SET) as TSet[]).map((s) => {
+						const t = SET_TYPES[s][0];
+						return (
+							<button
+								className={styles.gridItem}
+								key={s}
+								onClick={() => handleSetChange(s)}
+								type="button"
+							>
+								<div className={styles.gridItemIcon}>
+									<Icon
+										{...({
+											code,
+											set: s,
+											type: t,
+											style: {
+												["--iconSize" as string]:
+													`${size}px`,
+											},
+										} as TIconProps)}
+									/>
+								</div>
+								<span className={styles.gridItemCode}>
+									{SET_LABEL[s]}
+								</span>
+							</button>
+						);
+					})}
 				</div>
 			</div>
 		</div>

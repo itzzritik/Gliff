@@ -77,8 +77,6 @@ jobs:
 
             - name: Publishing Package 🚀
               run: npm publish --access public --provenance
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
             - name: Push new version to repository 🎉
               run: git push --follow-tags
