@@ -1,6 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-	type CSSProperties,
 	type ReactNode,
 	useEffect,
 	useMemo,
@@ -9,6 +8,7 @@ import {
 } from "react";
 import { Icon, type TIconProps } from "../../components/Icon/Icon";
 import { cn } from "../../utils/cn";
+import { useUrlState } from "../../utils/useUrlState";
 import { type IconData, useIconData } from "../useIconData";
 import styles from "./Icon.module.css";
 import {
@@ -17,6 +17,7 @@ import {
 	iconSize,
 	NumberFlip,
 	Preview,
+	Scrubber,
 	SearchBar,
 	SectionHead,
 } from "./shared";
@@ -197,8 +198,6 @@ const POPULAR_GLYPHS: Glyph[] = [
 const SCRUB_MIN = 4;
 const SCRUB_MAX = 256;
 const SCRUB_TICKS = [4, 32, 64, 96, 128, 160, 192, 224, 256];
-const tickPct = (t: number) =>
-	((t - SCRUB_MIN) / (SCRUB_MAX - SCRUB_MIN)) * 100;
 
 const SYNTAX_RE = /(<\/?[A-Za-z]+)|(\/?>)|(\b[a-z][\w-]*=)|("[^"]*")|(\{|\})/g;
 
@@ -209,13 +208,21 @@ const renderIcon = (
 	px: number
 ) => <Icon {...({ code, set, style: iconSize(px), type } as TIconProps)} />;
 
+const DEFAULT_VARIANT_SLUG = variantToSlug(VARIANTS[DEFAULT_VARIANT_IDX]);
+
 export const IconWorkbench = () => {
-	const [code, setCode] = useState("f007");
-	const [activeIdx, setActiveIdx] = useState(DEFAULT_VARIANT_IDX);
+	const [code, setCode] = useUrlState("code", "f007");
+	const [variantSlug, setVariantSlug] = useUrlState(
+		"variant",
+		DEFAULT_VARIANT_SLUG,
+	);
 	const [size, setSize] = useState(96);
 
 	const iconData = useIconData();
+	const activeIdx = VARIANT_IDX_BY_SLUG.get(variantSlug) ?? DEFAULT_VARIANT_IDX;
 	const active = VARIANTS[activeIdx];
+	const setActiveIdx = (idx: number) =>
+		setVariantSlug(variantToSlug(VARIANTS[idx]));
 
 	const supported = useMemo(
 		() => supportedVariantIndices(iconData, code),
@@ -226,7 +233,14 @@ export const IconWorkbench = () => {
 		<div className={shared.workbench}>
 			<aside className={shared.sidebar}>
 				<Specimen code={code} size={size} variant={active} />
-				<SizeScrubber onChange={setSize} size={size} />
+				<Scrubber
+				label="Icon size"
+				max={SCRUB_MAX}
+				min={SCRUB_MIN}
+				onChange={setSize}
+				ticks={SCRUB_TICKS}
+				value={size}
+			/>
 				<Snippet
 					code={code}
 					set={active.set}
@@ -263,6 +277,7 @@ const Specimen = ({
 	variant: Variant;
 }) => (
 	<Preview
+		copyLabel="Hex"
 		meta={[v.family, v.style, String(v.weight), `${size}px`]}
 		onCopy={() => navigator.clipboard.writeText(code)}
 		title={code}
@@ -270,64 +285,6 @@ const Specimen = ({
 		{renderIcon(code, v.set, v.type, size)}
 	</Preview>
 );
-
-const SizeScrubber = ({
-	onChange,
-	size,
-}: {
-	onChange: (n: number) => void;
-	size: number;
-}) => {
-	const pct = tickPct(size);
-	return (
-		<div className={styles.scrubber}>
-			<div className={styles.scrubberValue} key={size}>
-				<NumberFlip value={size} />
-				<span className={styles.scrubberUnit}>px</span>
-			</div>
-			<div className={styles.scrubberTrack}>
-				<div
-					aria-hidden="true"
-					className={styles.scrubberFill}
-					style={{ width: `${pct}%` }}
-				/>
-				<div
-					aria-hidden="true"
-					className={styles.scrubberThumb}
-					style={{ left: `${pct}%` }}
-				/>
-				<input
-					aria-label="Icon size"
-					className={styles.scrubberInput}
-					max={SCRUB_MAX}
-					min={SCRUB_MIN}
-					onChange={(e) => onChange(Number(e.target.value))}
-					step={1}
-					type="range"
-					value={size}
-				/>
-			</div>
-			<div aria-hidden="true" className={styles.scrubberTicks}>
-				{SCRUB_TICKS.map((t) => (
-					<button
-						className={cn(
-							styles.tick,
-							size === t && styles.tickActive
-						)}
-						key={t}
-						onClick={() => onChange(t)}
-						style={
-							{ "--tick-pos": `${tickPct(t)}%` } as CSSProperties
-						}
-						type="button"
-					>
-						{t}
-					</button>
-				))}
-			</div>
-		</div>
-	);
-};
 
 const buildSnippet = (
 	code: string,
@@ -362,6 +319,7 @@ const Snippet = ({
 		<div className={styles.snippet}>
 			<CopyButton
 				className={styles.snippetCopy}
+				label="Code"
 				onCopy={() => navigator.clipboard.writeText(text)}
 			/>
 			<pre className={styles.snippetBody}>

@@ -1,9 +1,9 @@
-import { useState } from "react";
 import styles from "./App.module.css";
 import { IconWorkbench } from "./playground/components/Icon";
 import { LottieWorkbench } from "./playground/components/Lottie";
 import "./playground/playground.css";
 import { useTheme } from "./playground/useTheme";
+import { useUrlState } from "./utils/useUrlState";
 
 declare const __APP_VERSION__: string;
 const VERSION = `v${__APP_VERSION__}`;
@@ -11,7 +11,9 @@ const VERSION = `v${__APP_VERSION__}`;
 type Tab = "icon" | "lottie";
 
 const App = () => {
-	const [tab, setTab] = useState<Tab>("icon");
+	const [rawTab, setRawTab] = useUrlState("tab", "icon");
+	const tab: Tab = rawTab === "lottie" ? "lottie" : "icon";
+	const setTab = (next: Tab) => setRawTab(next);
 	const { theme, toggle } = useTheme();
 
 	return (
@@ -95,6 +97,40 @@ const App = () => {
 				</nav>
 
 				<div className={styles.meta}>
+					<button
+						aria-label="Reset all selections"
+						className={styles.themeToggle}
+						onClick={() => {
+							const current = new URLSearchParams(window.location.search);
+							const next = new URLSearchParams();
+							const tabParam = current.get("tab");
+							if (tabParam) next.set("tab", tabParam);
+							const search = next.toString();
+							window.history.replaceState(
+								null,
+								"",
+								`${window.location.pathname}${search ? `?${search}` : ""}`
+							);
+							window.dispatchEvent(new PopStateEvent("popstate"));
+						}}
+						title="Reset"
+						type="button"
+					>
+						<svg
+							aria-hidden="true"
+							fill="none"
+							height="16"
+							stroke="currentColor"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth="1.6"
+							viewBox="0 0 16 16"
+							width="16"
+						>
+							<path d="M3 8 A5 5 0 1 0 5 4" />
+							<path d="M2 1.5 L3 4.5 L6 3.5" />
+						</svg>
+					</button>
 					<button
 						type="button"
 						className={styles.themeToggle}

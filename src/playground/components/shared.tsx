@@ -9,6 +9,70 @@ import {
 import { cn } from "../../utils/cn";
 import styles from "./shared.module.css";
 
+export const Scrubber = ({
+	value,
+	onChange,
+	min,
+	max,
+	ticks,
+	unit = "px",
+	label,
+}: {
+	value: number;
+	onChange: (n: number) => void;
+	min: number;
+	max: number;
+	ticks: number[];
+	unit?: string;
+	label: string;
+}) => {
+	const pctOf = (n: number) => ((n - min) / (max - min)) * 100;
+	const pct = pctOf(value);
+	return (
+		<div className={styles.scrubber}>
+			<div className={styles.scrubberValue} key={value}>
+				<NumberFlip value={value} />
+				<span className={styles.scrubberUnit}>{unit}</span>
+			</div>
+			<div className={styles.scrubberTrack}>
+				<div
+					aria-hidden="true"
+					className={styles.scrubberFill}
+					style={{ width: `${pct}%` }}
+				/>
+				<div
+					aria-hidden="true"
+					className={styles.scrubberThumb}
+					style={{ left: `${pct}%` }}
+				/>
+				<input
+					aria-label={label}
+					className={styles.scrubberInput}
+					max={max}
+					min={min}
+					onChange={(e) => onChange(Number(e.target.value))}
+					step={1}
+					type="range"
+					value={value}
+				/>
+			</div>
+			<div aria-hidden="true" className={styles.scrubberTicks}>
+				{ticks.map((t) => (
+					<button
+						className={cn(styles.tick, value === t && styles.tickActive)}
+						key={t}
+						onClick={() => onChange(t)}
+						style={{ "--tick-pos": `${pctOf(t)}%` } as CSSProperties}
+						type="button"
+					>
+						{t}
+					</button>
+				))}
+			</div>
+		</div>
+	);
+};
+
 export type TIconSizeStyle = CSSProperties & { "--iconSize"?: string };
 
 export const iconSize = (px: number | string): TIconSizeStyle => ({
@@ -30,12 +94,12 @@ export const SectionHead = ({
 
 export const CopyButton = ({
 	onCopy,
+	label,
 	className,
-	appearance = "default",
 }: {
 	onCopy: () => void | Promise<void>;
+	label: string;
 	className?: string;
-	appearance?: "default" | "dark";
 }) => {
 	const [copied, setCopied] = useState(false);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,12 +124,8 @@ export const CopyButton = ({
 
 	return (
 		<button
-			aria-label="Copy"
-			className={cn(
-				styles.copyBtn,
-				appearance === "dark" && styles.copyBtnDark,
-				className
-			)}
+			aria-label={`Copy ${label}`}
+			className={cn(styles.copyBtn, className)}
 			data-state={copied ? "copied" : "idle"}
 			onClick={handleClick}
 			type="button"
@@ -91,7 +151,7 @@ export const CopyButton = ({
 					</>
 				)}
 			</svg>
-			<span className={styles.copyLabel}>COPIED</span>
+			<span className={styles.copyLabel}>{copied ? "COPIED" : label}</span>
 		</button>
 	);
 };
@@ -111,13 +171,19 @@ export const NumberFlip = ({ value }: { value: number | string }) => {
 
 export const Preview = ({
 	title,
+	titleSize = "lg",
 	meta,
+	copyLabel,
 	onCopy,
+	footer,
 	children,
 }: {
 	title: string;
+	titleSize?: "lg" | "md";
 	meta?: (string | null | undefined | false)[];
+	copyLabel?: string;
 	onCopy?: () => void;
+	footer?: ReactNode;
 	children: ReactNode;
 }) => {
 	const metaItems = meta?.filter(Boolean) as string[] | undefined;
@@ -125,10 +191,18 @@ export const Preview = ({
 		<div className={styles.preview}>
 			<div className={styles.previewInfo}>
 				<div className={styles.previewHead}>
-					<div className={styles.previewTitle} key={title}>
+					<div
+						className={cn(
+							styles.previewTitle,
+							titleSize === "md" && styles.previewTitleMd,
+						)}
+						key={title}
+					>
 						{title}
 					</div>
-					{onCopy ? <CopyButton onCopy={onCopy} /> : null}
+					{onCopy && copyLabel ? (
+						<CopyButton label={copyLabel} onCopy={onCopy} />
+					) : null}
 				</div>
 				{metaItems && metaItems.length > 0 ? (
 					<div className={styles.previewMeta}>
@@ -146,6 +220,7 @@ export const Preview = ({
 					{children}
 				</div>
 			</div>
+			{footer ? <div className={styles.previewFooter}>{footer}</div> : null}
 		</div>
 	);
 };
@@ -156,6 +231,8 @@ export const Card = ({
 	meta,
 	active,
 	onClick,
+	onMouseEnter,
+	onMouseLeave,
 	title,
 }: {
 	icon: ReactNode;
@@ -163,11 +240,15 @@ export const Card = ({
 	meta?: string;
 	active?: boolean;
 	onClick: () => void;
+	onMouseEnter?: () => void;
+	onMouseLeave?: () => void;
 	title?: string;
 }) => (
 	<button
 		className={cn(styles.card, active && styles.cardActive)}
 		onClick={onClick}
+		onMouseEnter={onMouseEnter}
+		onMouseLeave={onMouseLeave}
 		title={title}
 		type="button"
 	>

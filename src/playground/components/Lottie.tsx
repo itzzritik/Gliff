@@ -9,28 +9,43 @@ import {
 } from "react";
 import { cn } from "../../utils/cn";
 import { lottieUrl } from "../../utils/assets";
+import { useUrlState } from "../../utils/useUrlState";
 import { useLottieIndex } from "../useLottieIndex";
 import styles from "./Lottie.module.css";
-import { Preview, SearchBar, SectionHead } from "./shared";
+import { Card, Preview, Scrubber, SearchBar, SectionHead } from "./shared";
 import shared from "./shared.module.css";
 
-const CELL_MIN_WIDTH = 140;
-const CELL_HEIGHT = 160;
+const CELL_MIN_WIDTH = 110;
+const CELL_HEIGHT = 110;
 const ROW_GAP = 8;
 const ROW_TOTAL = CELL_HEIGHT + ROW_GAP;
 
-const DEFAULT_SRC = lottieUrl("Welcome");
+const DEFAULT_LOTTIE = "SpacemanHappy";
+const DEFAULT_SRC = lottieUrl(DEFAULT_LOTTIE);
+
+const paramToSrc = (param: string): string =>
+	param.includes("://") ? param : lottieUrl(param);
+
+const srcToParam = (src: string): string => {
+	const match = src.match(/\/anim\/lottie\/([^/]+)\.lottie$/);
+	return match ? match[1] : src;
+};
+
+const SIZE_MIN = 64;
+const SIZE_MAX = 480;
+const SIZE_TICKS = [64, 120, 180, 240, 320, 400, 480];
+const SPEED_TICKS = [0.25, 0.5, 1, 1.5, 2, 3];
 
 const toLabel = (name: string): string =>
 	name
+		.replace(/[-_]+/g, " ")
 		.replace(/([a-z])([A-Z])/g, "$1 $2")
-		.replace(/([a-zA-Z])(\d)/g, "$1 $2");
-const SPEED_TICKS = [0.25, 0.5, 1, 1.5, 2, 3];
-const TIMELINE_TICK_COUNT = 9;
-const TIMELINE_TICKS = Array.from({ length: TIMELINE_TICK_COUNT }, (_, i) => ({
-	id: i,
-	left: `${(i / (TIMELINE_TICK_COUNT - 1)) * 100}%`,
-}));
+		.replace(/([a-zA-Z])(\d)/g, "$1 $2")
+		.replace(/\s+/g, " ")
+		.trim()
+		.split(" ")
+		.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+		.join(" ");
 
 interface DLBus {
 	addEventListener: (type: string, cb: (e: never) => void) => void;
@@ -41,7 +56,9 @@ interface DLBus {
 const asBus = (dl: DotLottie) => dl as unknown as DLBus;
 
 export const LottieWorkbench = () => {
-	const [src, setSrc] = useState(DEFAULT_SRC);
+	const [lottieParam, setLottieParam] = useUrlState("lottie", DEFAULT_LOTTIE);
+	const src = paramToSrc(lottieParam);
+	const setSrc = (next: string) => setLottieParam(srcToParam(next));
 	const [size, setSize] = useState(240);
 	const [speed, setSpeed] = useState(1);
 	const [loop, setLoop] = useState(true);
@@ -51,8 +68,19 @@ export const LottieWorkbench = () => {
 	const [frame, setFrame] = useState(0);
 	const [totalFrames, setTotalFrames] = useState(0);
 	const [duration, setDuration] = useState(0);
-	const [playing, setPlaying] = useState(true);
+	const [playing, setPlaying] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [previewReady, setPreviewReady] = useState(false);
+
+	useEffect(() => {
+		const t = setTimeout(() => setPreviewReady(true), 1500);
+		return () => clearTimeout(t);
+	}, []);
+
+	useEffect(() => {
+		if (!previewReady || !dotLottie || !autoplay) return;
+		dotLottie.play();
+	}, [previewReady, dotLottie, autoplay]);
 
 	useEffect(() => {
 		if (!dotLottie) return;
@@ -113,6 +141,7 @@ export const LottieWorkbench = () => {
 	}, [src]);
 
 	const previewMeta = [
+		lottieName,
 		`${size}px`,
 		duration ? `${duration.toFixed(2)}s` : null,
 		totalFrames ? `${totalFrames}f` : null,
@@ -123,9 +152,31 @@ export const LottieWorkbench = () => {
 		<div className={shared.workbench}>
 			<aside className={shared.sidebar}>
 				<Preview
+					footer={
+						<>
+							<Transport
+								frame={frame}
+								onSeek={handleSeek}
+								onStop={stop}
+								onToggle={togglePlay}
+								playing={playing}
+								progress={progress}
+								totalFrames={totalFrames}
+							/>
+							<MediaControls
+								autoplay={autoplay}
+								loop={loop}
+								setAutoplay={setAutoplay}
+								setLoop={setLoop}
+								setSpeed={setSpeed}
+								speed={speed}
+							/>
+						</>
+					}
+					copyLabel="Src"
 					meta={previewMeta}
 					onCopy={() => navigator.clipboard.writeText(src)}
-					title={lottieName}
+					title="Preview"
 				>
 					<div
 						className={styles.playerInner}
@@ -140,7 +191,7 @@ export const LottieWorkbench = () => {
 							</div>
 						) : (
 							<DotLottieReact
-								autoplay={autoplay}
+								autoplay={previewReady && autoplay}
 								className={styles.player}
 								dotLottieRefCallback={setDotLottie}
 								key={src}
@@ -152,18 +203,16 @@ export const LottieWorkbench = () => {
 					</div>
 				</Preview>
 
-				<Transport
-					frame={frame}
-					onSeek={handleSeek}
-					onStop={stop}
-					onToggle={togglePlay}
-					playing={playing}
-					progress={progress}
-					totalFrames={totalFrames}
+				<Scrubber
+					label="Lottie size"
+					max={SIZE_MAX}
+					min={SIZE_MIN}
+					onChange={setSize}
+					ticks={SIZE_TICKS}
+					value={size}
 				/>
 
 				<div className={styles.urlInput}>
-					<span className={styles.urlPrefix}>src</span>
 					<input
 						className={styles.urlField}
 						onChange={(e) => setSrc(e.target.value)}
@@ -173,58 +222,14 @@ export const LottieWorkbench = () => {
 						value={src}
 					/>
 					<button
+						aria-label="Reset to default"
 						className={styles.urlClear}
 						onClick={() => setSrc(DEFAULT_SRC)}
+						title="Reset"
 						type="button"
 					>
-						RESET
+						<ResetIcon />
 					</button>
-				</div>
-
-				<div className={styles.controlsGrid}>
-					<ControlSlider
-						label="Size"
-						max={480}
-						min={64}
-						onChange={setSize}
-						unit="px"
-						value={size}
-					/>
-					<ControlSlider
-						label="Speed"
-						max={3}
-						min={0.1}
-						onChange={setSpeed}
-						step={0.05}
-						ticks={SPEED_TICKS}
-						unit="x"
-						value={speed}
-					/>
-					<ControlSwitch
-						hint="Repeat continuously"
-						label="Loop"
-						onChange={setLoop}
-						value={loop}
-					/>
-					<ControlSwitch
-						hint="Begin playback on load"
-						label="Autoplay"
-						onChange={setAutoplay}
-						value={autoplay}
-					/>
-				</div>
-
-				<div className={styles.telemetry}>
-					<div className={styles.telemetryHead}>
-						<span>PROPERTIES</span>
-						<span>{playing ? "live" : "idle"}</span>
-					</div>
-					<TelemRow k="frame" v={`${frame}/${totalFrames || "—"}`} />
-					<TelemRow k="duration" v={`${duration.toFixed(2)}s`} />
-					<TelemRow k="speed" v={`${speed.toFixed(2)}x`} />
-					<TelemRow k="loop" v={loop ? "yes" : "no"} />
-					<TelemRow k="autoplay" v={autoplay ? "yes" : "no"} />
-					<TelemRow k="size" v={`${size}px`} />
 				</div>
 			</aside>
 
@@ -306,18 +311,22 @@ const Transport = ({
 
 	return (
 		<div className={styles.transport}>
-			<div className={styles.transportHead}>
-				<span className={styles.transportLabel}>TIMELINE</span>
-				<span className={styles.transportFrame}>
-					<span className={styles.frameNow}>
-						{String(frame).padStart(3, "0")}
-					</span>
-					<span className={styles.frameSep}>/</span>
-					<span className={styles.frameMax}>
-						{String(totalFrames).padStart(3, "0")}
-					</span>
-				</span>
-			</div>
+			<button
+				aria-label={playing ? "Pause" : "Play"}
+				className={styles.playBtn}
+				onClick={onToggle}
+				type="button"
+			>
+				{playing ? <PauseIcon /> : <PlayIcon />}
+			</button>
+			<button
+				aria-label="Stop"
+				className={styles.stopBtn}
+				onClick={onStop}
+				type="button"
+			>
+				<StopIcon />
+			</button>
 			<div
 				className={styles.timeline}
 				onPointerDown={(e) => {
@@ -337,150 +346,123 @@ const Transport = ({
 					className={styles.timelineHead}
 					style={{ left: `${progress}%` }}
 				/>
-				<div aria-hidden="true" className={styles.timelineTicks}>
-					{TIMELINE_TICKS.map((t) => (
-						<span
-							className={styles.timelineTick}
-							key={t.id}
-							style={{ left: t.left }}
-						/>
-					))}
-				</div>
 			</div>
-			<div className={styles.transportButtons}>
-				<button
-					aria-label={playing ? "Pause" : "Play"}
-					className={styles.playBtn}
-					onClick={onToggle}
-					type="button"
-				>
-					{playing ? <PauseIcon /> : <PlayIcon />}
-				</button>
-				<button
-					aria-label="Stop"
-					className={styles.stopBtn}
-					onClick={onStop}
-					type="button"
-				>
-					<StopIcon />
-				</button>
-			</div>
-		</div>
-	);
-};
-
-const TelemRow = ({ k, v }: { k: string; v: string }) => {
-	const [flash, setFlash] = useState(false);
-	const prev = useRef(v);
-	useEffect(() => {
-		if (prev.current === v) return;
-		prev.current = v;
-		setFlash(true);
-		const t = setTimeout(() => setFlash(false), 600);
-		return () => clearTimeout(t);
-	}, [v]);
-	return (
-		<div className={styles.telemetryRow}>
-			<span
-				aria-hidden="true"
-				className={cn(
-					styles.measureMark,
-					flash && styles.measureMarkFlash
-				)}
-			/>
-			<dt className={styles.telemetryKey}>{k}</dt>
-			<dd className={styles.telemetryVal}>{v}</dd>
-		</div>
-	);
-};
-
-interface ControlSliderProps {
-	label: string;
-	value: number;
-	onChange: (n: number) => void;
-	min: number;
-	max: number;
-	step?: number;
-	unit: string;
-	ticks?: number[];
-}
-
-const ControlSlider = ({
-	label,
-	max,
-	min,
-	onChange,
-	step = 1,
-	ticks,
-	unit,
-	value,
-}: ControlSliderProps) => (
-	<div className={styles.control}>
-		<div className={styles.controlHead}>
-			<span className={styles.controlLabel}>{label}</span>
-			<span className={styles.controlValue}>
-				{value.toFixed(value % 1 ? 2 : 0)}
-				<span className={styles.controlUnit}>{unit}</span>
+			<span className={styles.transportFrame}>
+				<span className={styles.frameNow}>{frame}</span>
+				<span className={styles.frameSep}>/</span>
+				<span className={styles.frameMax}>{totalFrames}</span>
 			</span>
 		</div>
-		<input
-			className={styles.controlRange}
-			max={max}
-			min={min}
-			onChange={(e) => onChange(Number(e.target.value))}
-			step={step}
-			type="range"
-			value={value}
-		/>
-		{ticks ? (
-			<div className={styles.controlTicks}>
-				{ticks.map((t) => (
-					<button
-						className={cn(
-							styles.controlTick,
-							Math.abs(value - t) < 0.01 &&
-								styles.controlTickActive
-						)}
-						key={t}
-						onClick={() => onChange(t)}
-						type="button"
-					>
-						{t}
-						{unit}
-					</button>
-				))}
-			</div>
-		) : null}
-	</div>
+	);
+};
+
+const ResetIcon = () => (
+	<svg
+		aria-hidden="true"
+		fill="none"
+		height="12"
+		stroke="currentColor"
+		strokeLinecap="round"
+		strokeLinejoin="round"
+		strokeWidth="1.6"
+		viewBox="0 0 16 16"
+		width="12"
+	>
+		<path d="M3 8 A5 5 0 1 0 5 4" />
+		<path d="M2 1.5 L3 4.5 L6 3.5" />
+	</svg>
 );
 
-interface ControlSwitchProps {
-	label: string;
-	hint: string;
-	value: boolean;
-	onChange: (v: boolean) => void;
-}
-
-const ControlSwitch = ({
-	hint,
-	label,
-	onChange,
-	value,
-}: ControlSwitchProps) => (
-	<button
-		className={styles.switch}
-		data-state={value ? "on" : "off"}
-		onClick={() => onChange(!value)}
-		type="button"
+const LoopIcon = () => (
+	<svg
+		aria-hidden="true"
+		fill="none"
+		height="14"
+		stroke="currentColor"
+		strokeLinecap="round"
+		strokeLinejoin="round"
+		strokeWidth="1.6"
+		viewBox="0 0 16 16"
+		width="14"
 	>
-		<div className={styles.switchHead}>
-			<span className={styles.controlLabel}>{label}</span>
-			<span className={styles.switchTrack}>
-				<span className={styles.switchKnob} />
-			</span>
+		<path d="M3 6 A4 4 0 0 1 11 6 L11 9" />
+		<path d="M13 7.5 L11 9.5 L9 7.5" />
+		<path d="M13 10 A4 4 0 0 1 5 10 L5 7" />
+		<path d="M3 8.5 L5 6.5 L7 8.5" />
+	</svg>
+);
+
+const AutoplayIcon = () => (
+	<svg
+		aria-hidden="true"
+		fill="none"
+		height="14"
+		stroke="currentColor"
+		strokeLinecap="round"
+		strokeLinejoin="round"
+		strokeWidth="1.6"
+		viewBox="0 0 16 16"
+		width="14"
+	>
+		<circle cx="8" cy="8" r="6" />
+		<path d="M6.5 5.5 L11 8 L6.5 10.5 Z" fill="currentColor" />
+	</svg>
+);
+
+const MediaControls = ({
+	speed,
+	setSpeed,
+	loop,
+	setLoop,
+	autoplay,
+	setAutoplay,
+}: {
+	speed: number;
+	setSpeed: (n: number) => void;
+	loop: boolean;
+	setLoop: (v: boolean) => void;
+	autoplay: boolean;
+	setAutoplay: (v: boolean) => void;
+}) => (
+	<div className={styles.mediaControls}>
+		<div className={styles.speedPicker}>
+			{SPEED_TICKS.map((s) => (
+				<button
+					className={cn(
+						styles.speedPill,
+						Math.abs(speed - s) < 0.001 && styles.speedPillActive,
+					)}
+					key={s}
+					onClick={() => setSpeed(s)}
+					type="button"
+				>
+					{s}x
+				</button>
+			))}
 		</div>
-		<span className={styles.switchHint}>{hint}</span>
-	</button>
+		<div className={styles.toggles}>
+			<button
+				aria-label="Loop"
+				aria-pressed={loop}
+				className={cn(styles.toggle, loop && styles.toggleActive)}
+				onClick={() => setLoop(!loop)}
+				title="Loop"
+				type="button"
+			>
+				<LoopIcon />
+			</button>
+			<button
+				aria-label="Autoplay"
+				aria-pressed={autoplay}
+				className={cn(styles.toggle, autoplay && styles.toggleActive)}
+				onClick={() => setAutoplay(!autoplay)}
+				title="Autoplay"
+				type="button"
+			>
+				<AutoplayIcon />
+			</button>
+		</div>
+	</div>
 );
 
 const LottieList = ({
@@ -588,26 +570,54 @@ const LottieCard = ({
 	name: string;
 	active: boolean;
 	onClick: () => void;
-}) => (
-	<button
-		className={cn(
-			shared.card,
-			styles.lottieCard,
-			active && shared.cardActive,
-		)}
-		onClick={onClick}
-		title={name}
-		type="button"
-	>
-		<div className={styles.lottiePreview}>
-			<DotLottieReact
-				autoplay={false}
-				className={styles.lottiePlayer}
-				loop
-				playOnHover
-				src={lottieUrl(name)}
-			/>
-		</div>
-		<span className={styles.lottieLabel}>{toLabel(name)}</span>
-	</button>
-);
+}) => {
+	const dlRef = useRef<DotLottie | null>(null);
+
+	const seekMid = useCallback(() => {
+		const dl = dlRef.current;
+		const total = dl?.totalFrames || 0;
+		if (dl && total > 0) dl.setFrame(Math.floor(total / 2));
+	}, []);
+
+	const handleRef = useCallback(
+		(dl: DotLottie | null) => {
+			dlRef.current = dl;
+			if (!dl) return;
+			dl.addEventListener("load", () => {
+				// Briefly play, then pause + seek to mid; this forces the
+				// renderer to draw the mid frame instead of leaving it blank.
+				dl.play();
+				requestAnimationFrame(() => {
+					dl.pause();
+					seekMid();
+				});
+			});
+		},
+		[seekMid],
+	);
+
+	return (
+		<Card
+			active={active}
+			icon={
+				<div className={styles.lottieMini}>
+					<DotLottieReact
+						autoplay={false}
+						className={styles.lottiePlayer}
+						dotLottieRefCallback={handleRef}
+						loop
+						src={lottieUrl(name)}
+					/>
+				</div>
+			}
+			label={toLabel(name)}
+			onClick={onClick}
+			onMouseEnter={() => dlRef.current?.play()}
+			onMouseLeave={() => {
+				dlRef.current?.pause();
+				seekMid();
+			}}
+			title={name}
+		/>
+	);
+};
