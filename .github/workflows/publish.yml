@@ -28,7 +28,7 @@ concurrency:
 jobs:
     publish:
         if: ${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'publish ') }}
-        name: ${{ github.event_name == 'workflow_dispatch' && format('Publish {0} version', inputs.version) || 'Deploy playground' }}
+        name: ${{ github.event_name == 'workflow_dispatch' && format('Publish {0} version', inputs.version) || 'Build' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
@@ -104,7 +104,7 @@ jobs:
               run: git push --follow-tags
 
     deploy:
-        name: Deploy to GitHub Pages
+        name: Deploy
         needs: publish
         runs-on: ubuntu-latest
         environment:
