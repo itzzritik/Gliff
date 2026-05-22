@@ -1,6 +1,7 @@
 import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import { Icon, type TIconProps } from "../../components/Icon/Icon";
 import { cn } from "../../utils/cn";
+import { type IconData, useIconData } from "../useIconData";
 import styles from "./Icon.module.css";
 import { CopyButton, iconSize, NumberFlip, SectionHead } from "./shared";
 import shared from "./shared.module.css";
@@ -70,6 +71,47 @@ const VARIANTS: Variant[] = [
 const DEFAULT_VARIANT_IDX = VARIANTS.findIndex(
 	(v) => v.set === "classic" && v.type === "regular"
 );
+
+// Bridges Icon.tsx's {set, type} shape to icons.json's sprite-slug strings.
+const variantToSlug = (v: Variant): string => {
+	if (v.set === "classic") return v.type as string;
+	if (v.set === "brand") return "brands";
+	if (v.set === "duotone" && v.type === "solid") return "duotone";
+	return v.type ? `${v.set}-${v.type}` : v.set;
+};
+
+const VARIANT_IDX_BY_SLUG = new Map(
+	VARIANTS.map((v, i) => [variantToSlug(v), i] as const)
+);
+
+const supportedVariantIndices = (
+	data: IconData | null,
+	code: string
+): Set<number> | null => {
+	if (!data) return null;
+	const glyph = data.glyphs[code];
+	if (!glyph) return new Set();
+	const set = new Set<number>();
+	for (const dataIdx of glyph.v) {
+		const local = VARIANT_IDX_BY_SLUG.get(data.variants[dataIdx]);
+		if (local !== undefined) set.add(local);
+	}
+	return set;
+};
+
+const variantForGlyph = (
+	data: IconData | null,
+	code: string,
+	active: Variant
+): Variant => {
+	if (!data) return active;
+	const supported = supportedVariantIndices(data, code);
+	if (!supported || supported.size === 0) return active;
+	const activeIdx = VARIANT_IDX_BY_SLUG.get(variantToSlug(active));
+	if (activeIdx !== undefined && supported.has(activeIdx)) return active;
+	const first = [...supported][0];
+	return VARIANTS[first];
+};
 
 const POPULAR_GLYPHS: Glyph[] = [
 	{ code: "f007", name: "user" },
@@ -157,7 +199,13 @@ export const IconWorkbench = () => {
 	const [size, setSize] = useState(96);
 	const [query, setQuery] = useState("");
 
+	const iconData = useIconData();
 	const active = VARIANTS[activeIdx];
+
+	const supported = useMemo(
+		() => supportedVariantIndices(iconData, code),
+		[iconData, code]
+	);
 
 	const filtered = useMemo(() => {
 		const q = query.toLowerCase().trim();
@@ -185,11 +233,13 @@ export const IconWorkbench = () => {
 					activeIdx={activeIdx}
 					code={code}
 					onPick={setActiveIdx}
+					supported={supported}
 				/>
 				<GlyphCatalog
 					activeCode={code}
 					activeVariant={active}
 					glyphs={filtered}
+					iconData={iconData}
 					onPick={setCode}
 					onQuery={setQuery}
 					query={query}
@@ -391,45 +441,54 @@ const VariantMatrix = ({
 	activeIdx,
 	code,
 	onPick,
+	supported,
 }: {
 	activeIdx: number;
 	code: string;
 	onPick: (idx: number) => void;
-}) => (
-	<div className={shared.section}>
-		<SectionHead title="Variants">
-			Selected glyph rendered across{" "}
-			<NumberFlip value={VARIANTS.length} /> available styles.
-		</SectionHead>
-		<div className={styles.matrix}>
-			{VARIANTS.map((v, idx) => (
-				<button
-					className={cn(
-						styles.cell,
-						idx === activeIdx && styles.cellActive
-					)}
-					key={`${v.set}-${v.type ?? "x"}`}
-					onClick={() => onPick(idx)}
-					style={{ animationDelay: `${idx * 14}ms` }}
-					type="button"
-				>
-					<div className={styles.cellGlyph}>
-						{renderIcon(code, v.set, v.type, 28)}
-					</div>
-					<div className={styles.cellMeta}>
-						<span className={styles.cellFamily}>{v.family}</span>
-						<span className={styles.cellStyle}>{v.style}</span>
-					</div>
-				</button>
-			))}
+	supported: Set<number> | null;
+}) => {
+	const visible = supported
+		? VARIANTS.map((v, i) => ({ v, i })).filter(({ i }) => supported.has(i))
+		: VARIANTS.map((v, i) => ({ v, i }));
+
+	return (
+		<div className={shared.section}>
+			<SectionHead title="Variants">
+				Selected glyph rendered across{" "}
+				<NumberFlip value={visible.length} /> available styles.
+			</SectionHead>
+			<div className={styles.matrix}>
+				{visible.map(({ v, i }, displayIdx) => (
+					<button
+						className={cn(
+							styles.cell,
+							i === activeIdx && styles.cellActive
+						)}
+						key={`${v.set}-${v.type ?? "x"}`}
+						onClick={() => onPick(i)}
+						style={{ animationDelay: `${displayIdx * 14}ms` }}
+						type="button"
+					>
+						<div className={styles.cellGlyph}>
+							{renderIcon(code, v.set, v.type, 28)}
+						</div>
+						<div className={styles.cellMeta}>
+							<span className={styles.cellFamily}>{v.family}</span>
+							<span className={styles.cellStyle}>{v.style}</span>
+						</div>
+					</button>
+				))}
+			</div>
 		</div>
-	</div>
-);
+	);
+};
 
 const GlyphCatalog = ({
 	activeCode,
 	activeVariant,
 	glyphs,
+	iconData,
 	onPick,
 	onQuery,
 	query,
@@ -438,6 +497,7 @@ const GlyphCatalog = ({
 	activeCode: string;
 	activeVariant: Variant;
 	glyphs: Glyph[];
+	iconData: IconData | null;
 	onPick: (c: string) => void;
 	onQuery: (q: string) => void;
 	query: string;
@@ -480,7 +540,9 @@ const GlyphCatalog = ({
 					No matches for <em>"{query}"</em>
 				</div>
 			) : (
-				glyphs.map((g, idx) => (
+				glyphs.map((g, idx) => {
+					const v = variantForGlyph(iconData, g.code, activeVariant);
+					return (
 					<button
 						className={cn(
 							styles.glyphCell,
@@ -497,15 +559,16 @@ const GlyphCatalog = ({
 						<div className={styles.glyphCellIcon}>
 							{renderIcon(
 								g.code,
-								activeVariant.set,
-								activeVariant.type,
+								v.set,
+								v.type,
 								22
 							)}
 						</div>
 						<span className={styles.glyphCellCode}>{g.code}</span>
 						<span className={styles.glyphCellName}>{g.name}</span>
 					</button>
-				))
+				);
+				})
 			)}
 		</div>
 	</div>
