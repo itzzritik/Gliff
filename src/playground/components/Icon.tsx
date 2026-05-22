@@ -16,6 +16,7 @@ import {
 	CopyButton,
 	iconSize,
 	NumberFlip,
+	Preview,
 	SearchBar,
 	SectionHead,
 } from "./shared";
@@ -260,43 +261,15 @@ const Specimen = ({
 	code: string;
 	size: number;
 	variant: Variant;
-}) => {
-	const glyphKey = `${code}-${v.set}-${v.type ?? ""}`;
-	const meta: { label: string; value: string }[] = [
-		{ label: "family", value: v.family },
-		{ label: "style", value: v.style },
-		{ label: "weight", value: String(v.weight) },
-		{ label: "size", value: `${size}px` },
-	].filter((m) => m.value);
-
-	return (
-		<div className={styles.specimen}>
-			<div className={styles.specimenInfo}>
-				<div className={styles.specimenHead}>
-					<div className={styles.specimenCode} key={code}>
-						{code}
-					</div>
-					<CopyButton
-						onCopy={() => navigator.clipboard.writeText(code)}
-					/>
-				</div>
-				<div className={styles.specimenMeta}>
-					{meta.map((m) => (
-						<span className={styles.metaItem} key={m.label}>
-							{m.value}
-						</span>
-					))}
-				</div>
-			</div>
-			<div className={styles.specimenPreview}>
-				<div aria-hidden="true" className={styles.specimenGrid} />
-				<div className={styles.specimenGlyph} key={glyphKey}>
-					{renderIcon(code, v.set, v.type, size)}
-				</div>
-			</div>
-		</div>
-	);
-};
+}) => (
+	<Preview
+		meta={[v.family, v.style, String(v.weight), `${size}px`]}
+		onCopy={() => navigator.clipboard.writeText(code)}
+		title={code}
+	>
+		{renderIcon(code, v.set, v.type, size)}
+	</Preview>
+);
 
 const SizeScrubber = ({
 	onChange,

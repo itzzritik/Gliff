@@ -11,7 +11,7 @@ import { cn } from "../../utils/cn";
 import { lottieUrl } from "../../utils/assets";
 import { useLottieIndex } from "../useLottieIndex";
 import styles from "./Lottie.module.css";
-import { SearchBar, SectionHead } from "./shared";
+import { Preview, SearchBar, SectionHead } from "./shared";
 import shared from "./shared.module.css";
 
 const CELL_MIN_WIDTH = 140;
@@ -104,54 +104,53 @@ export const LottieWorkbench = () => {
 	}, [dotLottie]);
 
 	const progress = totalFrames > 0 ? (frame / totalFrames) * 100 : 0;
-	const status = (() => {
-		if (error) return "ERROR";
-		if (playing) return "PLAYING";
-		return "PAUSED";
-	})();
+
+	const lottieName = useMemo(() => {
+		const match = src.match(/\/anim\/lottie\/([^/]+)\.lottie$/);
+		if (match) return toLabel(match[1]);
+		const last = src.split("/").pop() ?? "";
+		return last.replace(/\.(lottie|json)$/i, "") || "Custom";
+	}, [src]);
+
+	const previewMeta = [
+		`${size}px`,
+		duration ? `${duration.toFixed(2)}s` : null,
+		totalFrames ? `${totalFrames}f` : null,
+		`${speed.toFixed(2)}x`,
+	];
 
 	return (
 		<div className={shared.workbench}>
 			<aside className={shared.sidebar}>
-				<div className={styles.stage}>
-					<div aria-hidden="true" className={styles.stageMarks}>
-						<span>PREVIEW</span>
-						<span>{status}</span>
-					</div>
-					<div className={styles.stageCanvas}>
-						<div aria-hidden="true" className={styles.stageGrid} />
-						<div className={styles.playerWrap}>
-							<div
-								className={styles.playerInner}
-								style={{
-									height: `${size}px`,
-									width: `${size}px`,
-								}}
-							>
-								{error ? (
-									<div className={styles.errBox}>
-										<span className={styles.errLabel}>
-											LOAD ERROR
-										</span>
-										<span className={styles.errMsg}>
-											{error}
-										</span>
-									</div>
-								) : (
-									<DotLottieReact
-										autoplay={autoplay}
-										className={styles.player}
-										dotLottieRefCallback={setDotLottie}
-										key={src}
-										loop={loop}
-										speed={speed}
-										src={src}
-									/>
-								)}
+				<Preview
+					meta={previewMeta}
+					onCopy={() => navigator.clipboard.writeText(src)}
+					title={lottieName}
+				>
+					<div
+						className={styles.playerInner}
+						style={{ height: `${size}px`, width: `${size}px` }}
+					>
+						{error ? (
+							<div className={styles.errBox}>
+								<span className={styles.errLabel}>
+									LOAD ERROR
+								</span>
+								<span className={styles.errMsg}>{error}</span>
 							</div>
-						</div>
+						) : (
+							<DotLottieReact
+								autoplay={autoplay}
+								className={styles.player}
+								dotLottieRefCallback={setDotLottie}
+								key={src}
+								loop={loop}
+								speed={speed}
+								src={src}
+							/>
+						)}
 					</div>
-				</div>
+				</Preview>
 
 				<Transport
 					frame={frame}
@@ -602,9 +601,10 @@ const LottieCard = ({
 	>
 		<div className={styles.lottiePreview}>
 			<DotLottieReact
-				autoplay
+				autoplay={false}
 				className={styles.lottiePlayer}
 				loop
+				playOnHover
 				src={lottieUrl(name)}
 			/>
 		</div>

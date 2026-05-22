@@ -109,6 +109,47 @@ export const NumberFlip = ({ value }: { value: number | string }) => {
 	);
 };
 
+export const Preview = ({
+	title,
+	meta,
+	onCopy,
+	children,
+}: {
+	title: string;
+	meta?: (string | null | undefined | false)[];
+	onCopy?: () => void;
+	children: ReactNode;
+}) => {
+	const metaItems = meta?.filter(Boolean) as string[] | undefined;
+	return (
+		<div className={styles.preview}>
+			<div className={styles.previewInfo}>
+				<div className={styles.previewHead}>
+					<div className={styles.previewTitle} key={title}>
+						{title}
+					</div>
+					{onCopy ? <CopyButton onCopy={onCopy} /> : null}
+				</div>
+				{metaItems && metaItems.length > 0 ? (
+					<div className={styles.previewMeta}>
+						{metaItems.map((item, i) => (
+							<span className={styles.metaItem} key={`${i}-${item}`}>
+								{item}
+							</span>
+						))}
+					</div>
+				) : null}
+			</div>
+			<div className={styles.previewBody}>
+				<div aria-hidden="true" className={styles.previewGrid} />
+				<div className={styles.previewContent} key={title}>
+					{children}
+				</div>
+			</div>
+		</div>
+	);
+};
+
 export const Card = ({
 	icon,
 	label,

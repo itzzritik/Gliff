@@ -265,6 +265,101 @@
 	min-width: 0;
 }
 
+/* ---------- Preview ---------- */
+
+.preview {
+	position: relative;
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-3);
+	overflow: hidden;
+	background: transparent;
+	animation: fade-up var(--dur-slow) var(--ease-precision) 100ms both;
+}
+
+.previewInfo {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	padding: var(--space-4);
+	border-bottom: 1px solid var(--hairline);
+}
+
+.previewHead {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--space-4);
+}
+
+.previewTitle {
+	font-family: var(--font-display);
+	font-size: 42px;
+	font-weight: 400;
+	letter-spacing: -0.02em;
+	line-height: 0.95;
+	color: var(--fg);
+	font-variant-numeric: tabular-nums;
+	animation: glyph-pop 300ms var(--ease-precision);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.previewMeta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 14px;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--muted);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.01em;
+}
+
+.metaItem {
+	position: relative;
+}
+.metaItem + .metaItem::before {
+	content: "·";
+	position: absolute;
+	left: -10px;
+	color: var(--subtle);
+}
+
+.previewBody {
+	position: relative;
+	aspect-ratio: 5 / 4;
+	width: 100%;
+}
+
+.previewGrid {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background-image:
+		linear-gradient(to right, var(--hairline) 1px, transparent 1px),
+		linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
+	background-size: calc(100% / 12) calc(100% / 10);
+	background-position: 0 0;
+	-webkit-mask: linear-gradient(#000, #000) no-repeat 1px 1px /
+		calc(100% - 2px) calc(100% - 2px);
+	mask: linear-gradient(#000, #000) no-repeat 1px 1px /
+		calc(100% - 2px) calc(100% - 2px);
+	z-index: 1;
+}
+
+.previewContent {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2;
+	color: var(--fg);
+	animation: glyph-pop 380ms var(--ease-precision);
+}
+
 /* ---------- Card ---------- */
 
 .card {
