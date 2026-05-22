@@ -1,4 +1,5 @@
 import { type DotLottie, DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
 	useCallback,
 	useEffect,
@@ -7,45 +8,23 @@ import {
 	useState,
 } from "react";
 import { cn } from "../../utils/cn";
+import { lottieUrl } from "../../utils/assets";
+import { useLottieIndex } from "../useLottieIndex";
 import styles from "./Lottie.module.css";
 import { SearchBar, SectionHead } from "./shared";
 import shared from "./shared.module.css";
 
-interface Sample {
-	label: string;
-	src: string;
-	tag: string;
-}
+const CELL_MIN_WIDTH = 140;
+const CELL_HEIGHT = 160;
+const ROW_GAP = 8;
+const ROW_TOTAL = CELL_HEIGHT + ROW_GAP;
 
-const SAMPLES: Sample[] = [
-	{
-		label: "Hello World",
-		tag: "loop",
-		src: "https://lottie.host/4db68bbd-31f6-4cd8-84eb-189de081159a/IGmMCqhzpt.lottie",
-	},
-	{
-		label: "Pulse",
-		tag: "loop",
-		src: "https://assets1.lottiefiles.com/packages/lf20_jcikwtux.json",
-	},
-	{
-		label: "Confetti",
-		tag: "burst",
-		src: "https://assets2.lottiefiles.com/packages/lf20_iv4dsx3q.json",
-	},
-	{
-		label: "Loader",
-		tag: "spin",
-		src: "https://assets3.lottiefiles.com/packages/lf20_tutvdkg0.json",
-	},
-	{
-		label: "Wave",
-		tag: "ambient",
-		src: "https://assets4.lottiefiles.com/packages/lf20_b88nh30c.json",
-	},
-];
+const DEFAULT_SRC = lottieUrl("Welcome");
 
-const DEFAULT_SRC = SAMPLES[0].src;
+const toLabel = (name: string): string =>
+	name
+		.replace(/([a-z])([A-Z])/g, "$1 $2")
+		.replace(/([a-zA-Z])(\d)/g, "$1 $2");
 const SPEED_TICKS = [0.25, 0.5, 1, 1.5, 2, 3];
 const TIMELINE_TICK_COUNT = 9;
 const TIMELINE_TICKS = Array.from({ length: TIMELINE_TICK_COUNT }, (_, i) => ({
@@ -67,17 +46,6 @@ export const LottieWorkbench = () => {
 	const [speed, setSpeed] = useState(1);
 	const [loop, setLoop] = useState(true);
 	const [autoplay, setAutoplay] = useState(true);
-	const [sampleQuery, setSampleQuery] = useState("");
-
-	const filteredSamples = useMemo(() => {
-		const q = sampleQuery.toLowerCase().trim();
-		if (!q) return SAMPLES;
-		return SAMPLES.filter(
-			(s) =>
-				s.label.toLowerCase().includes(q) ||
-				s.tag.toLowerCase().includes(q)
-		);
-	}, [sampleQuery]);
 
 	const [dotLottie, setDotLottie] = useState<DotLottie | null>(null);
 	const [frame, setFrame] = useState(0);
@@ -195,6 +163,58 @@ export const LottieWorkbench = () => {
 					totalFrames={totalFrames}
 				/>
 
+				<div className={styles.urlInput}>
+					<span className={styles.urlPrefix}>src</span>
+					<input
+						className={styles.urlField}
+						onChange={(e) => setSrc(e.target.value)}
+						placeholder="https://lottie.host/…"
+						spellCheck={false}
+						type="text"
+						value={src}
+					/>
+					<button
+						className={styles.urlClear}
+						onClick={() => setSrc(DEFAULT_SRC)}
+						type="button"
+					>
+						RESET
+					</button>
+				</div>
+
+				<div className={styles.controlsGrid}>
+					<ControlSlider
+						label="Size"
+						max={480}
+						min={64}
+						onChange={setSize}
+						unit="px"
+						value={size}
+					/>
+					<ControlSlider
+						label="Speed"
+						max={3}
+						min={0.1}
+						onChange={setSpeed}
+						step={0.05}
+						ticks={SPEED_TICKS}
+						unit="x"
+						value={speed}
+					/>
+					<ControlSwitch
+						hint="Repeat continuously"
+						label="Loop"
+						onChange={setLoop}
+						value={loop}
+					/>
+					<ControlSwitch
+						hint="Begin playback on load"
+						label="Autoplay"
+						onChange={setAutoplay}
+						value={autoplay}
+					/>
+				</div>
+
 				<div className={styles.telemetry}>
 					<div className={styles.telemetryHead}>
 						<span>PROPERTIES</span>
@@ -211,103 +231,11 @@ export const LottieWorkbench = () => {
 
 			<section className={shared.canvas}>
 				<div className={shared.section}>
-					<SectionHead title="Source">
-						Provide a remote .lottie or .json URL.
+					<SectionHead title="Library">
+						Pick a lottie from the Gliff library, or paste any
+						remote URL into <em>src</em>.
 					</SectionHead>
-					<div className={styles.urlInput}>
-						<span className={styles.urlPrefix}>src</span>
-						<input
-							className={styles.urlField}
-							onChange={(e) => setSrc(e.target.value)}
-							placeholder="https://lottie.host/…"
-							spellCheck={false}
-							type="text"
-							value={src}
-						/>
-						<button
-							className={styles.urlClear}
-							onClick={() => setSrc(DEFAULT_SRC)}
-							type="button"
-						>
-							RESET
-						</button>
-					</div>
-					<SearchBar
-						matched={filteredSamples.length}
-						onChange={setSampleQuery}
-						placeholder="Filter samples by name or tag…"
-						total={SAMPLES.length}
-						value={sampleQuery}
-					/>
-					<div className={styles.samples}>
-						{filteredSamples.map((s) => (
-							<button
-								className={cn(
-									styles.sampleCard,
-									src === s.src && styles.sampleCardActive
-								)}
-								key={s.src}
-								onClick={() => setSrc(s.src)}
-								type="button"
-							>
-								<div className={styles.samplePreview}>
-									<DotLottieReact
-										autoplay
-										className={styles.samplePlayer}
-										key={`${s.src}-mini`}
-										loop
-										src={s.src}
-									/>
-								</div>
-								<div className={styles.sampleMeta}>
-									<span className={styles.sampleLabel}>
-										{s.label}
-									</span>
-									<span className={styles.sampleTag}>
-										{s.tag}
-									</span>
-								</div>
-							</button>
-						))}
-					</div>
-				</div>
-
-				<div className={shared.section}>
-					<SectionHead title="Controls">
-						Configure size, playback speed, and looping.
-					</SectionHead>
-					<div className={styles.controlsGrid}>
-						<ControlSlider
-							label="Size"
-							max={480}
-							min={64}
-							onChange={setSize}
-							unit="px"
-							value={size}
-						/>
-						<ControlSlider
-							label="Speed"
-							max={3}
-							min={0.1}
-							onChange={setSpeed}
-							step={0.05}
-							ticks={SPEED_TICKS}
-							unit="x"
-							value={speed}
-						/>
-						<ControlSwitch
-							hint="Repeat continuously"
-							label="Loop"
-							onChange={setLoop}
-							value={loop}
-						/>
-						<ControlSwitch
-							hint="Begin playback on load"
-							label="Autoplay"
-							onChange={setAutoplay}
-							value={autoplay}
-						/>
-					</div>
+					<LottieList onPick={setSrc} src={src} />
 				</div>
 			</section>
 		</div>
@@ -553,5 +481,133 @@ const ControlSwitch = ({
 			</span>
 		</div>
 		<span className={styles.switchHint}>{hint}</span>
+	</button>
+);
+
+const LottieList = ({
+	src,
+	onPick,
+}: {
+	src: string;
+	onPick: (url: string) => void;
+}) => {
+	const files = useLottieIndex();
+	const [query, setQuery] = useState("");
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const [cols, setCols] = useState(4);
+
+	const visible = useMemo(() => {
+		if (!files) return [];
+		const q = query.toLowerCase().trim();
+		if (!q) return files;
+		return files.filter((name) => name.toLowerCase().includes(q));
+	}, [files, query]);
+
+	useEffect(() => {
+		const el = scrollRef.current;
+		if (!el) return;
+		const ro = new ResizeObserver(([entry]) => {
+			const w = entry.contentRect.width;
+			setCols(
+				Math.max(
+					1,
+					Math.floor((w + ROW_GAP) / (CELL_MIN_WIDTH + ROW_GAP)),
+				),
+			);
+		});
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, []);
+
+	const rowCount = Math.ceil(visible.length / cols);
+	const virtualizer = useVirtualizer({
+		count: rowCount,
+		getScrollElement: () => scrollRef.current,
+		estimateSize: () => ROW_TOTAL,
+		overscan: 3,
+	});
+
+	return (
+		<>
+			<SearchBar
+				matched={visible.length}
+				onChange={setQuery}
+				placeholder="Filter lotties by name…"
+				total={files?.length ?? 0}
+				value={query}
+			/>
+			<div className={styles.lottieScroll} ref={scrollRef}>
+				{files === null ? (
+					<div className={shared.gridEmpty}>Loading library…</div>
+				) : visible.length === 0 ? (
+					<div className={shared.gridEmpty}>
+						No matches for <em>"{query}"</em>
+					</div>
+				) : (
+					<div
+						style={{
+							height: virtualizer.getTotalSize(),
+							position: "relative",
+						}}
+					>
+						{virtualizer.getVirtualItems().map((row) => {
+							const start = row.index * cols;
+							const rowNames = visible.slice(start, start + cols);
+							return (
+								<div
+									className={shared.gridRow}
+									key={row.key}
+									style={{
+										transform: `translateY(${row.start}px)`,
+										gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+										height: row.size,
+									}}
+								>
+									{rowNames.map((name) => (
+										<LottieCard
+											active={src === lottieUrl(name)}
+											key={name}
+											name={name}
+											onClick={() => onPick(lottieUrl(name))}
+										/>
+									))}
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</div>
+		</>
+	);
+};
+
+const LottieCard = ({
+	name,
+	active,
+	onClick,
+}: {
+	name: string;
+	active: boolean;
+	onClick: () => void;
+}) => (
+	<button
+		className={cn(
+			shared.card,
+			styles.lottieCard,
+			active && shared.cardActive,
+		)}
+		onClick={onClick}
+		title={name}
+		type="button"
+	>
+		<div className={styles.lottiePreview}>
+			<DotLottieReact
+				autoplay
+				className={styles.lottiePlayer}
+				loop
+				src={lottieUrl(name)}
+			/>
+		</div>
+		<span className={styles.lottieLabel}>{toLabel(name)}</span>
 	</button>
 );

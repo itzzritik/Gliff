@@ -3,7 +3,7 @@
 	border: 1px solid var(--hairline);
 	border-radius: var(--radius-3);
 	overflow: hidden;
-	background: var(--bg-elev);
+	background: transparent;
 	animation: fade-up var(--dur-slow) var(--ease-precision) 100ms both;
 }
 
@@ -84,7 +84,7 @@
 .transport {
 	border: 1px solid var(--hairline);
 	border-radius: var(--radius-3);
-	background: var(--bg-elev);
+	background: transparent;
 	padding: var(--space-3) var(--space-4) var(--space-4);
 	animation: fade-up var(--dur-slow) var(--ease-precision) 140ms both;
 }
@@ -154,7 +154,7 @@
 	background: var(--accent);
 	border-radius: 999px;
 	box-shadow:
-		0 0 0 3px var(--bg-elev),
+		0 0 0 3px var(--bg),
 		0 0 0 4px var(--accent);
 	transform: translate(-50%, -50%);
 	pointer-events: none;
@@ -221,7 +221,7 @@
 	margin: 0;
 	border: 1px solid var(--hairline);
 	border-radius: var(--radius-3);
-	background: var(--bg-elev);
+	background: transparent;
 	overflow: hidden;
 	animation: fade-up var(--dur-slow) var(--ease-precision) 180ms both;
 }
@@ -278,7 +278,7 @@
 	padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
 	border: 1px solid var(--hairline);
 	border-radius: var(--radius-3);
-	background: var(--bg-elev);
+	background: transparent;
 	transition: border-color var(--dur-base) var(--ease-precision);
 }
 .urlInput:focus-within {
@@ -317,72 +317,56 @@
 	border-color: var(--accent);
 }
 
-.samples {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+.lottieScroll {
+	position: relative;
+	height: calc(100dvh - var(--chrome-h) - 220px);
+	min-height: 520px;
+	overflow-y: auto;
+	overflow-x: hidden;
+	scrollbar-gutter: stable;
+}
+
+.lottieCard {
+	min-height: 160px;
 	gap: var(--space-3);
 }
 
-.sampleCard {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2);
-	padding: var(--space-3);
-	border: 1px solid var(--hairline);
-	border-radius: var(--radius-3);
-	background: var(--bg-elev);
-	transition:
-		border-color var(--dur-fast) var(--ease-precision),
-		background var(--dur-fast) var(--ease-precision);
-	cursor: pointer;
-	text-align: left;
-}
-.sampleCard:hover {
-	background: var(--bg-deep);
-	border-color: var(--hairline-strong);
-}
-.sampleCardActive {
-	border-color: var(--accent);
-	background: var(--accent-soft);
-}
-
-.samplePreview {
+.lottiePreview {
+	width: 100%;
 	aspect-ratio: 1;
-	border-radius: var(--radius-2);
-	background: var(--bg-deep);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	overflow: hidden;
-}
-.samplePlayer {
-	width: 60%;
-	height: 60%;
 }
 
-.sampleMeta {
-	display: flex;
-	justify-content: space-between;
-	align-items: baseline;
+.lottiePlayer {
+	width: 100%;
+	height: 100%;
 }
 
-.sampleLabel {
-	font-family: var(--font-display);
-	font-size: 14px;
+.lottieLabel {
+	font-family: var(--font-ui);
+	font-size: 11px;
+	font-weight: 500;
 	color: var(--fg);
+	text-align: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
 }
 
-.sampleTag {
-	font-family: var(--font-mono);
-	font-size: 9.5px;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	color: var(--muted);
+.lottieSkeleton {
+	min-height: 140px;
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-2);
+	background: transparent;
+	opacity: 0.5;
 }
 
 .controlsGrid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	display: flex;
+	flex-direction: column;
 	gap: var(--space-3);
 }
 
@@ -390,7 +374,7 @@
 	padding: var(--space-4);
 	border: 1px solid var(--hairline);
 	border-radius: var(--radius-3);
-	background: var(--bg-elev);
+	background: transparent;
 }
 
 .controlHead {
@@ -439,7 +423,7 @@
 	border-radius: 999px;
 	background: var(--accent);
 	box-shadow:
-		0 0 0 4px var(--bg-elev),
+		0 0 0 4px var(--bg),
 		0 0 0 5px var(--accent);
 	cursor: pointer;
 }
@@ -448,7 +432,7 @@
 	height: 12px;
 	border-radius: 999px;
 	background: var(--accent);
-	border: 4px solid var(--bg-elev);
+	border: 4px solid var(--bg);
 	box-shadow: 0 0 0 1px var(--accent);
 	cursor: pointer;
 }
@@ -485,7 +469,7 @@
 	padding: var(--space-4);
 	border: 1px solid var(--hairline);
 	border-radius: var(--radius-3);
-	background: var(--bg-elev);
+	background: transparent;
 	transition: border-color var(--dur-fast) var(--ease-precision);
 	text-align: left;
 	cursor: pointer;
