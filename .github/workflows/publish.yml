@@ -62,8 +62,8 @@ jobs:
                   set -euo pipefail
                   SHA=$(gh api repos/itzzjarvis/Assets/commits/main --jq .sha)
                   [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "❌ Invalid SHA: '$SHA'"; exit 1; }
-                  sed -i "s|/Assets@[^/]\+/|/Assets@$SHA/|" src/utils/setup.tsx
-                  grep -q "@$SHA/" src/utils/setup.tsx || { echo "❌ URL not rewritten"; exit 1; }
+                  sed -i "s|const SHA = \"[a-f0-9]\{40\}\"|const SHA = \"$SHA\"|" src/utils/assets.ts
+                  grep -q "\"$SHA\"" src/utils/assets.ts || { echo "❌ SHA not rewritten"; exit 1; }
                   echo "📌 CDN → Assets@${SHA:0:7}"
 
             - name: Bump version & tag

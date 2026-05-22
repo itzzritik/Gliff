@@ -1,9 +1,8 @@
+import { ASSETS_FA_CSS as CDN } from "./assets";
+
 type GliffProps =
 	| { react: boolean; next?: boolean }
 	| { react?: boolean; next: boolean };
-
-const CDN =
-	"https://cdn.jsdelivr.net/gh/itzzjarvis/Assets@743c1dea64ca2d3787ad1da89ec753a059342c5b/styles/fa/fa.css";
 
 export const Gliff = ({ react, next }: GliffProps) => {
 	if (
