@@ -6,6 +6,7 @@
 		"name": "Ritik Srivastava"
 	},
 	"license": "ISC",
+	"packageManager": "pnpm@10.13.1",
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -b && vite build",
