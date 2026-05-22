@@ -12,19 +12,23 @@ on:
                     - patch
                     - minor
                     - major
+    push:
+        branches:
+            - main
 
 permissions:
     contents: write
     id-token: write
+    pages: write
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+    cancel-in-progress: false
 
 jobs:
     publish:
-        if: github.actor != 'github-actions[bot]'
-        name: Publish ${{ inputs.version }} version
+        if: ${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'publish ') }}
+        name: ${{ github.event_name == 'workflow_dispatch' && format('Publish {0} version', inputs.version) || 'Deploy playground' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
@@ -42,6 +46,7 @@ jobs:
                   run_install: true
 
             - name: Setup Git & SSH signing
+              if: github.event_name == 'workflow_dispatch'
               run: |
                   git config user.email "ritik.jarvis@gmail.com"
                   git config user.name "Jarvis"
@@ -67,6 +72,7 @@ jobs:
                   echo "📌 CDN → Assets@${SHA:0:7}"
 
             - name: Bump version & tag
+              if: github.event_name == 'workflow_dispatch'
               env:
                   VERSION: ${{ inputs.version }}
               run: |
@@ -76,11 +82,35 @@ jobs:
                   git commit -am "publish $TAG"
                   git tag -s -m "publish $TAG" $TAG
 
-            - name: Build
+            - name: Build library
+              if: github.event_name == 'workflow_dispatch'
               run: pnpm build
 
+            - name: Build playground
+              run: pnpm build:playground
+
+            - name: Write CNAME for custom domain
+              run: echo "gliff.ritik.me" > playground-dist/CNAME
+
+            - uses: actions/upload-pages-artifact@v5
+              with:
+                  path: playground-dist
+
             - name: Publish to npm
+              if: github.event_name == 'workflow_dispatch'
               run: npm publish --access public --provenance
 
             - name: Push
+              if: github.event_name == 'workflow_dispatch'
               run: git push --follow-tags
+
+    deploy:
+        name: Deploy to GitHub Pages
+        needs: publish
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - id: deployment
+              uses: actions/deploy-pages@v5

@@ -11,35 +11,44 @@ const dirname =
 		? __dirname
 		: path.dirname(fileURLToPath(import.meta.url));
 
+const isPlayground = process.env.PLAYGROUND === "true";
+
+const sharedBuild = { sourcemap: false, minify: "terser" } as const;
+
 export default defineConfig({
 	define: {
 		__APP_VERSION__: JSON.stringify(pkg.version),
 	},
 	plugins: [
 		react(),
-		libInjectCss(),
-		dts({
-			insertTypesEntry: true,
-			tsconfigPath: "./tsconfig.app.json",
-			rollupTypes: true,
-		}),
+		...(isPlayground
+			? []
+			: [
+					libInjectCss(),
+					dts({
+						insertTypesEntry: true,
+						tsconfigPath: "./tsconfig.app.json",
+						rollupTypes: true,
+					}),
+				]),
 	],
-	build: {
-		lib: {
-			name: "Gliff",
-			fileName: "gliff",
-			entry: path.resolve(dirname, "src/index.ts"),
-			formats: ["es"],
-		},
-		rollupOptions: {
-			external: [
-				"react",
-				"react-dom",
-				"react/jsx-runtime",
-				"@lottiefiles/dotlottie-react",
-			],
-		},
-		sourcemap: false,
-		minify: "terser",
-	},
+	build: isPlayground
+		? { ...sharedBuild, outDir: "playground-dist" }
+		: {
+				...sharedBuild,
+				lib: {
+					name: "Gliff",
+					fileName: "gliff",
+					entry: path.resolve(dirname, "src/index.ts"),
+					formats: ["es"],
+				},
+				rollupOptions: {
+					external: [
+						"react",
+						"react-dom",
+						"react/jsx-runtime",
+						"@lottiefiles/dotlottie-react",
+					],
+				},
+			},
 });
