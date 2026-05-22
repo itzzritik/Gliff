@@ -1,72 +1,77 @@
-import {
-	type CSSProperties,
-	type ReactNode,
-	useCallback,
-	useEffect,
-	useMemo,
-	useState,
-} from "react";
+import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import { Icon, type TIconProps } from "../../components/Icon/Icon";
+import { cn } from "../../utils/cn";
 import styles from "./Icon.module.css";
-
-/* ────────────────────────────────────────────────────────────────────
- * Family-style catalog. Mirrors fa.css. Tabular order for the matrix.
- * ──────────────────────────────────────────────────────────────────── */
+import { CopyButton, iconSize, NumberFlip, SectionHead } from "./shared";
+import shared from "./shared.module.css";
 
 type TSet = NonNullable<TIconProps["set"]>;
 type TType = NonNullable<TIconProps["type"]>;
-type Variant = {
+
+interface Glyph {
+	code: string;
+	name: string;
+}
+
+interface Variant {
 	set: TSet;
 	type?: TType;
 	family: string;
 	style: string;
 	weight: 100 | 300 | 400 | 600 | 900;
+}
+
+const WEIGHT_BY_TYPE: Record<TType, Variant["weight"]> = {
+	thin: 100,
+	light: 300,
+	regular: 400,
+	semibold: 600,
+	solid: 900,
 };
 
+const titleCase = (s: string) =>
+	s
+		.split("-")
+		.map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+		.join(" ");
+
+const variant = (set: TSet, type?: TType): Variant => ({
+	set,
+	type,
+	family: titleCase(set),
+	style: type ? titleCase(type) : "",
+	weight: type ? WEIGHT_BY_TYPE[type] : 400,
+});
+
+const FOUR_TYPES: TType[] = ["thin", "light", "regular", "solid"];
+
 const VARIANTS: Variant[] = [
-	// Row 1 — Classic & Duotone (8)
-	{ set: "classic", type: "thin", family: "Classic", style: "Thin", weight: 100 },
-	{ set: "classic", type: "light", family: "Classic", style: "Light", weight: 300 },
-	{ set: "classic", type: "regular", family: "Classic", style: "Regular", weight: 400 },
-	{ set: "classic", type: "solid", family: "Classic", style: "Solid", weight: 900 },
-	{ set: "duotone", type: "thin", family: "Duotone", style: "Thin", weight: 100 },
-	{ set: "duotone", type: "light", family: "Duotone", style: "Light", weight: 300 },
-	{ set: "duotone", type: "regular", family: "Duotone", style: "Regular", weight: 400 },
-	{ set: "duotone", type: "solid", family: "Duotone", style: "Solid", weight: 900 },
-	// Row 2 — Sharp & Sharp Duotone (8)
-	{ set: "sharp", type: "thin", family: "Sharp", style: "Thin", weight: 100 },
-	{ set: "sharp", type: "light", family: "Sharp", style: "Light", weight: 300 },
-	{ set: "sharp", type: "regular", family: "Sharp", style: "Regular", weight: 400 },
-	{ set: "sharp", type: "solid", family: "Sharp", style: "Solid", weight: 900 },
-	{ set: "sharp-duotone", type: "thin", family: "Sharp Duotone", style: "Thin", weight: 100 },
-	{ set: "sharp-duotone", type: "light", family: "Sharp Duotone", style: "Light", weight: 300 },
-	{ set: "sharp-duotone", type: "regular", family: "Sharp Duotone", style: "Regular", weight: 400 },
-	{ set: "sharp-duotone", type: "solid", family: "Sharp Duotone", style: "Solid", weight: 900 },
-	// Row 3 — Style families (8)
-	{ set: "brand", family: "Brand", style: "", weight: 400 },
-	{ set: "chisel", type: "regular", family: "Chisel", style: "Regular", weight: 400 },
-	{ set: "etch", type: "solid", family: "Etch", style: "Solid", weight: 900 },
-	{ set: "graphite", type: "thin", family: "Graphite", style: "Thin", weight: 100 },
-	{ set: "thumbprint", type: "light", family: "Thumbprint", style: "Light", weight: 300 },
-	{ set: "whiteboard", type: "semibold", family: "Whiteboard", style: "Semibold", weight: 600 },
-	{ set: "jelly", type: "regular", family: "Jelly", style: "Regular", weight: 400 },
-	{ set: "jelly-duo", type: "regular", family: "Jelly Duo", style: "Regular", weight: 400 },
-	// Row 4 — More style families (8)
-	{ set: "jelly-fill", type: "regular", family: "Jelly Fill", style: "Regular", weight: 400 },
-	{ set: "notdog", type: "solid", family: "Notdog", style: "Solid", weight: 900 },
-	{ set: "notdog-duo", type: "solid", family: "Notdog Duo", style: "Solid", weight: 900 },
-	{ set: "slab", type: "regular", family: "Slab", style: "Regular", weight: 400 },
-	{ set: "slab-press", type: "regular", family: "Slab Press", style: "Regular", weight: 400 },
-	{ set: "utility", type: "semibold", family: "Utility", style: "Semibold", weight: 600 },
-	{ set: "utility-duo", type: "semibold", family: "Utility Duo", style: "Semibold", weight: 600 },
-	{ set: "utility-fill", type: "semibold", family: "Utility Fill", style: "Semibold", weight: 600 },
+	...(["classic", "duotone", "sharp", "sharp-duotone"] as const).flatMap(
+		(s) => FOUR_TYPES.map((t) => variant(s, t))
+	),
+	variant("brand"),
+	variant("chisel", "regular"),
+	variant("etch", "solid"),
+	variant("graphite", "thin"),
+	variant("thumbprint", "light"),
+	variant("whiteboard", "semibold"),
+	variant("jelly", "regular"),
+	variant("jelly-duo", "regular"),
+	variant("jelly-fill", "regular"),
+	variant("notdog", "solid"),
+	variant("notdog-duo", "solid"),
+	variant("slab", "regular"),
+	variant("slab-press", "regular"),
+	variant("utility", "semibold"),
+	variant("utility-duo", "semibold"),
+	variant("utility-fill", "semibold"),
 ];
 
-/* ────────────────────────────────────────────────────────────────────
- * Curated popular glyphs (codes from FA v7 Pro).
- * ──────────────────────────────────────────────────────────────────── */
+const DEFAULT_VARIANT_IDX = VARIANTS.findIndex(
+	(v) => v.set === "classic" && v.type === "regular"
+);
 
-const POPULAR_GLYPHS: { code: string; name: string }[] = [
+const POPULAR_GLYPHS: Glyph[] = [
 	{ code: "f007", name: "user" },
 	{ code: "f015", name: "home" },
 	{ code: "f013", name: "gear" },
@@ -119,7 +124,6 @@ const POPULAR_GLYPHS: { code: string; name: string }[] = [
 	{ code: "f3ed", name: "shield" },
 	{ code: "f021", name: "rotate" },
 	{ code: "f0ad", name: "wrench" },
-	{ code: "f005", name: "star" },
 	{ code: "f1da", name: "clock-rotate" },
 	{ code: "f0d0", name: "wand-magic" },
 	{ code: "f3c5", name: "map-marker" },
@@ -132,98 +136,86 @@ const POPULAR_GLYPHS: { code: string; name: string }[] = [
 	{ code: "f0a3", name: "certificate" },
 ];
 
-/* ────────────────────────────────────────────────────────────────────
- * Workbench
- * ──────────────────────────────────────────────────────────────────── */
+const SCRUB_MIN = 4;
+const SCRUB_MAX = 256;
+const SCRUB_TICKS = [4, 32, 64, 96, 128, 160, 192, 224, 256];
+const tickPct = (t: number) =>
+	((t - SCRUB_MIN) / (SCRUB_MAX - SCRUB_MIN)) * 100;
+
+const SYNTAX_RE = /(<\/?[A-Za-z]+)|(\/?>)|(\b[a-z][\w-]*=)|("[^"]*")|(\{|\})/g;
+
+const renderIcon = (
+	code: string,
+	set: TSet,
+	type: TType | undefined,
+	px: number
+) => <Icon {...({ code, set, style: iconSize(px), type } as TIconProps)} />;
 
 export const IconWorkbench = () => {
 	const [code, setCode] = useState("f007");
-	const [activeIdx, setActiveIdx] = useState(2); // classic / regular
+	const [activeIdx, setActiveIdx] = useState(DEFAULT_VARIANT_IDX);
 	const [size, setSize] = useState(96);
 	const [query, setQuery] = useState("");
 
 	const active = VARIANTS[activeIdx];
 
 	const filtered = useMemo(() => {
-		if (!query.trim()) return POPULAR_GLYPHS;
 		const q = query.toLowerCase().trim();
+		if (!q) return POPULAR_GLYPHS;
 		return POPULAR_GLYPHS.filter(
 			(g) => g.code.includes(q) || g.name.includes(q)
 		);
 	}, [query]);
 
-	const iconProps = useMemo(
-		() =>
-			({
-				code,
-				set: active.set,
-				type: active.type,
-				style: { ["--iconSize" as string]: `${size}px` },
-			}) as TIconProps,
-		[code, active, size]
-	);
-
 	return (
-		<div className={styles.workbench}>
-			<aside className={styles.sidebar}>
-				<Specimen
+		<div className={shared.workbench}>
+			<aside className={shared.sidebar}>
+				<Specimen code={code} size={size} variant={active} />
+				<SizeScrubber onChange={setSize} size={size} />
+				<Snippet
 					code={code}
-					family={active.family}
-					iconProps={iconProps}
+					set={active.set}
 					size={size}
-					style={active.style}
-					weight={active.weight}
+					type={active.type}
 				/>
-				<SizeScrubber size={size} onChange={setSize} />
-				<Snippet code={code} set={active.set} type={active.type} size={size} />
 			</aside>
 
-			<section className={styles.canvas}>
+			<section className={shared.canvas}>
 				<VariantMatrix
-					code={code}
 					activeIdx={activeIdx}
+					code={code}
 					onPick={setActiveIdx}
 				/>
 				<GlyphCatalog
-					glyphs={filtered}
-					total={POPULAR_GLYPHS.length}
-					query={query}
-					onQuery={setQuery}
 					activeCode={code}
 					activeVariant={active}
+					glyphs={filtered}
 					onPick={setCode}
+					onQuery={setQuery}
+					query={query}
+					total={POPULAR_GLYPHS.length}
 				/>
 			</section>
 		</div>
 	);
 };
 
-/* ────────────────────────────────────────────────────────────────────
- * Specimen — selected glyph details and preview
- * ──────────────────────────────────────────────────────────────────── */
-
 const Specimen = ({
 	code,
-	family,
-	iconProps,
 	size,
-	style,
-	weight,
+	variant: v,
 }: {
 	code: string;
-	family: string;
-	iconProps: TIconProps;
 	size: number;
-	style: string;
-	weight: number | string;
+	variant: Variant;
 }) => {
-	const [bumpKey, setBumpKey] = useState(0);
-
-	useEffect(() => {
-		setBumpKey((k) => k + 1);
-	}, [iconProps.code, iconProps.set, iconProps.type]);
-
-	const metaParts = [family, style, String(weight), `${size}px`].filter(Boolean);
+	const glyphKey = `${code}-${v.set}-${v.type ?? ""}`;
+	const meta: { label: string; value: string }[] = [
+		{ label: "family", value: v.family },
+		{ label: "style", value: v.style },
+		{ label: "weight", value: String(v.weight) },
+		{ label: "size", value: `${size}px` },
+	].filter((m) => m.value);
 
 	return (
 		<div className={styles.specimen}>
@@ -232,92 +224,36 @@ const Specimen = ({
 					<div className={styles.specimenCode} key={code}>
 						{code}
 					</div>
-					<CopyButton onCopy={() => navigator.clipboard.writeText(code)} />
+					<CopyButton
+						onCopy={() => navigator.clipboard.writeText(code)}
+					/>
 				</div>
 				<div className={styles.specimenMeta}>
-					{metaParts.map((part, i) => (
-						<span className={styles.metaItem} key={`${part}-${i}`}>
-							{part}
+					{meta.map((m) => (
+						<span className={styles.metaItem} key={m.label}>
+							{m.value}
 						</span>
 					))}
 				</div>
 			</div>
 			<div className={styles.specimenPreview}>
 				<div aria-hidden="true" className={styles.specimenGrid} />
-				<div className={styles.specimenGlyph} key={`g-${bumpKey}`}>
-					<Icon {...iconProps} />
+				<div className={styles.specimenGlyph} key={glyphKey}>
+					{renderIcon(code, v.set, v.type, size)}
 				</div>
 			</div>
 		</div>
 	);
 };
 
-const CopyButton = ({
-	onCopy,
-	className,
-}: {
-	onCopy: () => void | Promise<void>;
-	className?: string;
-}) => {
-	const [copied, setCopied] = useState(false);
-	const handleClick = useCallback(async () => {
-		try {
-			await onCopy();
-			setCopied(true);
-			setTimeout(() => setCopied(false), 1400);
-		} catch {}
-	}, [onCopy]);
-
-	return (
-		<button
-			aria-label="Copy"
-			className={`${styles.copyBtn}${className ? ` ${className}` : ""}`}
-			data-state={copied ? "copied" : "idle"}
-			onClick={handleClick}
-			type="button"
-		>
-			<svg
-				aria-hidden="true"
-				className={styles.copyIcon}
-				fill="none"
-				height="12"
-				stroke="currentColor"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-				strokeWidth="1.6"
-				viewBox="0 0 16 16"
-				width="12"
-			>
-				{copied ? (
-					<path d="M3.5 8.5 L6.5 11.5 L12.5 5" />
-				) : (
-					<>
-						<rect height="9" rx="1.6" width="9" x="5" y="5" />
-						<path d="M3 11 H2.6 A1 1 0 0 1 1.6 10 V3 A1 1 0 0 1 2.6 2 H10 A1 1 0 0 1 11 3 V3.4" />
-					</>
-				)}
-			</svg>
-			<span className={styles.copyLabel}>COPIED</span>
-		</button>
-	);
-};
-
-/* ────────────────────────────────────────────────────────────────────
- * Size scrubber — custom range with tick marks
- * ──────────────────────────────────────────────────────────────────── */
-
-const SCRUB_MIN = 4;
-const SCRUB_MAX = 256;
-const SCRUB_TICKS = [4, 32, 64, 96, 128, 160, 192, 224, 256];
-
 const SizeScrubber = ({
-	size,
 	onChange,
+	size,
 }: {
-	size: number;
 	onChange: (n: number) => void;
+	size: number;
 }) => {
-	const pct = ((size - SCRUB_MIN) / (SCRUB_MAX - SCRUB_MIN)) * 100;
+	const pct = tickPct(size);
 	return (
 		<div className={styles.scrubber}>
 			<div className={styles.scrubberValue} key={size}>
@@ -326,38 +262,39 @@ const SizeScrubber = ({
 			</div>
 			<div className={styles.scrubberTrack}>
 				<div
+					aria-hidden="true"
 					className={styles.scrubberFill}
 					style={{ width: `${pct}%` }}
-					aria-hidden="true"
 				/>
 				<div
+					aria-hidden="true"
 					className={styles.scrubberThumb}
 					style={{ left: `${pct}%` }}
-					aria-hidden="true"
 				/>
 				<input
-					type="range"
-					min={SCRUB_MIN}
-					max={SCRUB_MAX}
-					step={1}
-					value={size}
-					onChange={(e) => onChange(Number(e.target.value))}
-					className={styles.scrubberInput}
 					aria-label="Icon size"
+					className={styles.scrubberInput}
+					max={SCRUB_MAX}
+					min={SCRUB_MIN}
+					onChange={(e) => onChange(Number(e.target.value))}
+					step={1}
+					type="range"
+					value={size}
 				/>
 			</div>
-			<div className={styles.scrubberTicks} aria-hidden="true">
+			<div aria-hidden="true" className={styles.scrubberTicks}>
 				{SCRUB_TICKS.map((t) => (
 					<button
+						className={cn(
+							styles.tick,
+							size === t && styles.tickActive
+						)}
 						key={t}
-						type="button"
-						className={`${styles.tick} ${size === t ? styles.tickActive : ""}`}
 						onClick={() => onChange(t)}
 						style={
-							{
-								"--tick-pos": `${((t - SCRUB_MIN) / (SCRUB_MAX - SCRUB_MIN)) * 100}%`,
-							} as CSSProperties
+							{ "--tick-pos": `${tickPct(t)}%` } as CSSProperties
 						}
+						type="button"
 					>
 						{t}
 					</button>
@@ -367,59 +304,52 @@ const SizeScrubber = ({
 	);
 };
 
-/* ────────────────────────────────────────────────────────────────────
- * Tabular number that flips digit-by-digit on change.
- * ──────────────────────────────────────────────────────────────────── */
-
-const NumberFlip = ({ value }: { value: number | string }) => {
-	const str = String(value);
-	return (
-		<span className={styles.flipNum}>
-			{str.split("").map((ch, i) => (
-				<span key={`${i}-${ch}`} className={styles.flipDigit}>
-					{ch}
-				</span>
-			))}
-		</span>
-	);
+const buildSnippet = (
+	code: string,
+	set: TSet,
+	type: TType | undefined,
+	size: number
+): string => {
+	const sizeClass = `ico-${Math.round(size / 4)}`;
+	const attrs = [`code="${code}"`];
+	if (set !== "classic") attrs.push(`set="${set}"`);
+	if (type && type !== "regular" && set !== "brand")
+		attrs.push(`type="${type}"`);
+	attrs.push(`className="${sizeClass}"`);
+	return `<Icon\n  ${attrs.join("\n  ")}\n/>`;
 };
-
-/* ────────────────────────────────────────────────────────────────────
- * Snippet — copy-on-click JSX block
- * ──────────────────────────────────────────────────────────────────── */
 
 const Snippet = ({
 	code,
 	set,
-	type,
 	size,
+	type,
 }: {
 	code: string;
 	set: TSet;
-	type?: TType;
 	size: number;
+	type?: TType;
 }) => {
-	const text =
-		set === "classic" && (!type || type === "regular")
-			? `<Icon\n  code="${code}"\n  className="ico-${Math.round(size / 4)}"\n/>`
-			: set === "brand"
-				? `<Icon\n  code="${code}"\n  set="brand"\n  className="ico-${Math.round(size / 4)}"\n/>`
-				: type
-					? `<Icon\n  code="${code}"\n  set="${set}"\n  type="${type}"\n  className="ico-${Math.round(size / 4)}"\n/>`
-					: `<Icon\n  code="${code}"\n  set="${set}"\n  className="ico-${Math.round(size / 4)}"\n/>`;
+	const text = buildSnippet(code, set, type, size);
 	const lines = text.split("\n");
 
 	return (
 		<div className={styles.snippet}>
 			<CopyButton
+				appearance="dark"
 				className={styles.snippetCopy}
 				onCopy={() => navigator.clipboard.writeText(text)}
 			/>
 			<pre className={styles.snippetBody}>
 				<code>
 					{lines.map((line, i) => (
-						<div className={styles.snippetLine} key={i}>
-							<span className={styles.snippetLineNo}>{i + 1}</span>
+						<div
+							className={styles.snippetLine}
+							key={`${i}:${line}`}
+						>
+							<span className={styles.snippetLineNo}>
+								{i + 1}
+							</span>
 							<span className={styles.snippetLineCode}>
 								{colorize(line)}
 							</span>
@@ -431,182 +361,152 @@ const Snippet = ({
 	);
 };
 
+const SYN_CLASSES = [
+	styles.synTag,
+	styles.synBracket,
+	styles.synAttr,
+	styles.synStr,
+	styles.synBrace,
+];
+
 const colorize = (src: string): ReactNode[] => {
 	const out: ReactNode[] = [];
-	const re = /(<\/?[A-Za-z]+)|(\/?>)|(\b[a-z][\w-]*=)|("[^"]*")|(\{|\})/g;
-	let m: RegExpExecArray | null;
 	let last = 0;
-	while ((m = re.exec(src)) !== null) {
-		if (m.index > last) {
-			out.push(src.slice(last, m.index));
-		}
-		const t = m[0];
-		const cls = m[1]
-			? styles.synTag
-			: m[2]
-				? styles.synBracket
-				: m[3]
-					? styles.synAttr
-					: m[4]
-						? styles.synStr
-						: styles.synBrace;
+	for (const m of src.matchAll(SYNTAX_RE)) {
+		const idx = m.index ?? 0;
+		if (idx > last) out.push(src.slice(last, idx));
+		const groupIdx = [1, 2, 3, 4, 5].findIndex((i) => m[i] !== undefined);
 		out.push(
-			<span key={m.index} className={cls}>
-				{t}
+			<span className={SYN_CLASSES[groupIdx]} key={idx}>
+				{m[0]}
 			</span>
 		);
-		last = re.lastIndex;
+		last = idx + m[0].length;
 	}
 	if (last < src.length) out.push(src.slice(last));
 	return out;
 };
 
-/* ────────────────────────────────────────────────────────────────────
- * Variant matrix — current glyph across all 32 family-styles
- * ──────────────────────────────────────────────────────────────────── */
-
 const VariantMatrix = ({
-	code,
 	activeIdx,
+	code,
 	onPick,
 }: {
-	code: string;
 	activeIdx: number;
+	code: string;
 	onPick: (idx: number) => void;
-}) => {
-	return (
-		<div className={styles.section}>
-			<header className={styles.sectionHead}>
-				<h2 className={styles.sectionTitle}>Variants</h2>
-				<p className={styles.sectionDesc}>
-					Selected glyph rendered across{" "}
-					<NumberFlip value={VARIANTS.length} /> available styles.
-				</p>
-			</header>
-			<div className={styles.matrix}>
-				{VARIANTS.map((v, idx) => (
-					<button
-						type="button"
-						key={`${v.set}-${v.type ?? "x"}`}
-						className={`${styles.cell} ${idx === activeIdx ? styles.cellActive : ""}`}
-						onClick={() => onPick(idx)}
-						style={
-							{
-								animationDelay: `${idx * 14}ms`,
-							} as CSSProperties
-						}
-					>
-						<div className={styles.cellGlyph}>
-							<Icon
-								{...({
-									code,
-									set: v.set,
-									type: v.type,
-									style: { ["--iconSize" as string]: "28px" },
-								} as TIconProps)}
-							/>
-						</div>
-						<div className={styles.cellMeta}>
-							<span className={styles.cellFamily}>{v.family}</span>
-							<span className={styles.cellStyle}>{v.style}</span>
-						</div>
-					</button>
-				))}
-			</div>
+}) => (
+	<div className={shared.section}>
+		<SectionHead title="Variants">
+			Selected glyph rendered across{" "}
+			<NumberFlip value={VARIANTS.length} /> available styles.
+		</SectionHead>
+		<div className={styles.matrix}>
+			{VARIANTS.map((v, idx) => (
+				<button
+					className={cn(
+						styles.cell,
+						idx === activeIdx && styles.cellActive
+					)}
+					key={`${v.set}-${v.type ?? "x"}`}
+					onClick={() => onPick(idx)}
+					style={{ animationDelay: `${idx * 14}ms` }}
+					type="button"
+				>
+					<div className={styles.cellGlyph}>
+						{renderIcon(code, v.set, v.type, 28)}
+					</div>
+					<div className={styles.cellMeta}>
+						<span className={styles.cellFamily}>{v.family}</span>
+						<span className={styles.cellStyle}>{v.style}</span>
+					</div>
+				</button>
+			))}
 		</div>
-	);
-};
-
-/* ────────────────────────────────────────────────────────────────────
- * Glyph catalog — dense, searchable popular icons
- * ──────────────────────────────────────────────────────────────────── */
+	</div>
+);
 
 const GlyphCatalog = ({
-	glyphs,
-	total,
-	query,
-	onQuery,
 	activeCode,
 	activeVariant,
+	glyphs,
 	onPick,
+	onQuery,
+	query,
+	total,
 }: {
-	glyphs: { code: string; name: string }[];
-	total: number;
-	query: string;
-	onQuery: (q: string) => void;
 	activeCode: string;
 	activeVariant: Variant;
+	glyphs: Glyph[];
 	onPick: (c: string) => void;
-}) => {
-	return (
-		<div className={styles.section}>
-			<header className={styles.sectionHead}>
-				<h2 className={styles.sectionTitle}>Glyphs</h2>
-				<p className={styles.sectionDesc}>
-					<NumberFlip value={total} /> common glyphs in{" "}
-					<em>
-						{activeVariant.family} {activeVariant.style}
-					</em>
-					.
-				</p>
-			</header>
-			<div className={styles.catalogSearch}>
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 16 16"
-					aria-hidden="true"
-					className={styles.searchIcon}
-				>
-					<circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" />
-					<line x1="11" y1="11" x2="14" y2="14" stroke="currentColor" />
-				</svg>
-				<input
-					type="text"
-					value={query}
-					onChange={(e) => onQuery(e.target.value)}
-					placeholder="Filter by name or unicode hex…"
-					className={styles.catalogInput}
-				/>
-				<span className={styles.catalogCount}>
-					<NumberFlip value={glyphs.length} />/<NumberFlip value={total} />
-				</span>
-			</div>
-			<div className={styles.catalog}>
-				{glyphs.length === 0 ? (
-					<div className={styles.catalogEmpty}>
-						No matches for <em>"{query}"</em>
-					</div>
-				) : (
-					glyphs.map((g, idx) => (
-						<button
-							type="button"
-							key={`${g.code}-${idx}`}
-							className={`${styles.glyphCell} ${activeCode === g.code ? styles.glyphCellActive : ""}`}
-							onClick={() => onPick(g.code)}
-							style={
-								{
-									animationDelay: `${Math.min(idx * 8, 400)}ms`,
-								} as CSSProperties
-							}
-							title={`${g.name} · ${g.code}`}
-						>
-							<div className={styles.glyphCellIcon}>
-								<Icon
-									{...({
-										code: g.code,
-										set: activeVariant.set,
-										type: activeVariant.type,
-										style: { ["--iconSize" as string]: "22px" },
-									} as TIconProps)}
-								/>
-							</div>
-							<span className={styles.glyphCellCode}>{g.code}</span>
-							<span className={styles.glyphCellName}>{g.name}</span>
-						</button>
-					))
-				)}
-			</div>
+	onQuery: (q: string) => void;
+	query: string;
+	total: number;
+}) => (
+	<div className={shared.section}>
+		<SectionHead title="Glyphs">
+			<NumberFlip value={total} /> common glyphs in{" "}
+			<em>
+				{activeVariant.family} {activeVariant.style}
+			</em>
+			.
+		</SectionHead>
+		<div className={styles.catalogSearch}>
+			<svg
+				aria-hidden="true"
+				className={styles.searchIcon}
+				height="14"
+				viewBox="0 0 16 16"
+				width="14"
+			>
+				<circle cx="7" cy="7" fill="none" r="5" stroke="currentColor" />
+				<line stroke="currentColor" x1="11" x2="14" y1="11" y2="14" />
+			</svg>
+			<input
+				className={styles.catalogInput}
+				onChange={(e) => onQuery(e.target.value)}
+				placeholder="Filter by name or unicode hex…"
+				type="text"
+				value={query}
+			/>
+			<span className={styles.catalogCount}>
+				<NumberFlip value={glyphs.length} />/
+				<NumberFlip value={total} />
+			</span>
 		</div>
-	);
-};
+		<div className={styles.catalog}>
+			{glyphs.length === 0 ? (
+				<div className={styles.catalogEmpty}>
+					No matches for <em>"{query}"</em>
+				</div>
+			) : (
+				glyphs.map((g, idx) => (
+					<button
+						className={cn(
+							styles.glyphCell,
+							activeCode === g.code && styles.glyphCellActive
+						)}
+						key={g.code}
+						onClick={() => onPick(g.code)}
+						style={{
+							animationDelay: `${Math.min(idx * 8, 400)}ms`,
+						}}
+						title={`${g.name} · ${g.code}`}
+						type="button"
+					>
+						<div className={styles.glyphCellIcon}>
+							{renderIcon(
+								g.code,
+								activeVariant.set,
+								activeVariant.type,
+								22
+							)}
+						</div>
+						<span className={styles.glyphCellCode}>{g.code}</span>
+						<span className={styles.glyphCellName}>{g.name}</span>
+					</button>
+				))
+			)}
+		</div>
+	</div>
+);

@@ -1,14 +1,17 @@
 import { type DotLottie, DotLottieReact } from "@lottiefiles/dotlottie-react";
-import {
-	type CSSProperties,
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "../../utils/cn";
 import styles from "./Lottie.module.css";
+import { SectionHead } from "./shared";
+import shared from "./shared.module.css";
 
-const SAMPLES: { label: string; src: string; tag: string }[] = [
+interface Sample {
+	label: string;
+	src: string;
+	tag: string;
+}
+
+const SAMPLES: Sample[] = [
 	{
 		label: "Hello World",
 		tag: "loop",
@@ -37,6 +40,20 @@ const SAMPLES: { label: string; src: string; tag: string }[] = [
 ];
 
 const DEFAULT_SRC = SAMPLES[0].src;
+const SPEED_TICKS = [0.25, 0.5, 1, 1.5, 2, 3];
+const TIMELINE_TICK_COUNT = 9;
+const TIMELINE_TICKS = Array.from({ length: TIMELINE_TICK_COUNT }, (_, i) => ({
+	id: i,
+	left: `${(i / (TIMELINE_TICK_COUNT - 1)) * 100}%`,
+}));
+
+interface DLBus {
+	addEventListener: (type: string, cb: (e: never) => void) => void;
+	removeEventListener: (type: string, cb: (e: never) => void) => void;
+	setFrame: (f: number) => void;
+}
+
+const asBus = (dl: DotLottie) => dl as unknown as DLBus;
 
 export const LottieWorkbench = () => {
 	const [src, setSrc] = useState(DEFAULT_SRC);
@@ -59,42 +76,34 @@ export const LottieWorkbench = () => {
 			setTotalFrames(dotLottie.totalFrames || 0);
 			setDuration(dotLottie.duration || 0);
 		};
-		const onFrame = (e: { currentFrame: number }) =>
-			setFrame(Math.round(e.currentFrame));
+		const onFrame = (e: { currentFrame: number }) => {
+			const next = Math.round(e.currentFrame);
+			setFrame((prev) => (prev === next ? prev : next));
+		};
 		const onPlay = () => setPlaying(true);
 		const onPause = () => setPlaying(false);
 		const onStop = () => setPlaying(false);
 		const onError = (e: { error: { message?: string } }) =>
 			setError(e.error?.message ?? "Failed to load");
 
-		// Listener types in dotlottie-web vary across versions; cast for ergonomics.
-		const dl = dotLottie as unknown as {
-			addEventListener: (type: string, cb: (...args: never[]) => void) => void;
-			removeEventListener: (
-				type: string,
-				cb: (...args: never[]) => void
-			) => void;
-		};
-		dl.addEventListener("load", onLoad as never);
-		dl.addEventListener("frame", onFrame as never);
-		dl.addEventListener("play", onPlay as never);
-		dl.addEventListener("pause", onPause as never);
-		dl.addEventListener("stop", onStop as never);
-		dl.addEventListener("loadError", onError as never);
+		const bus = asBus(dotLottie);
+		const handlers: [string, (e: never) => void][] = [
+			["load", onLoad as never],
+			["frame", onFrame as never],
+			["play", onPlay as never],
+			["pause", onPause as never],
+			["stop", onStop as never],
+			["loadError", onError as never],
+		];
+		for (const [t, cb] of handlers) bus.addEventListener(t, cb);
 		return () => {
-			dl.removeEventListener("load", onLoad as never);
-			dl.removeEventListener("frame", onFrame as never);
-			dl.removeEventListener("play", onPlay as never);
-			dl.removeEventListener("pause", onPause as never);
-			dl.removeEventListener("stop", onStop as never);
-			dl.removeEventListener("loadError", onError as never);
+			for (const [t, cb] of handlers) bus.removeEventListener(t, cb);
 		};
 	}, [dotLottie]);
 
 	const handleSeek = useCallback(
 		(f: number) => {
-			if (!dotLottie) return;
-			(dotLottie as unknown as { setFrame: (f: number) => void }).setFrame(f);
+			if (dotLottie) asBus(dotLottie).setFrame(f);
 		},
 		[dotLottie]
 	);
@@ -106,50 +115,52 @@ export const LottieWorkbench = () => {
 	}, [dotLottie, playing]);
 
 	const stop = useCallback(() => {
-		if (!dotLottie) return;
-		dotLottie.stop();
+		dotLottie?.stop();
 	}, [dotLottie]);
 
-	const speedTicks = [0.25, 0.5, 1, 1.5, 2, 3];
-
 	const progress = totalFrames > 0 ? (frame / totalFrames) * 100 : 0;
+	const status = (() => {
+		if (error) return "ERROR";
+		if (playing) return "PLAYING";
+		return "PAUSED";
+	})();
 
 	return (
-		<div className={styles.workbench}>
-			<aside className={styles.sidebar}>
+		<div className={shared.workbench}>
+			<aside className={shared.sidebar}>
 				<div className={styles.stage}>
-					<div className={styles.stageMarks} aria-hidden="true">
+					<div aria-hidden="true" className={styles.stageMarks}>
 						<span>PREVIEW</span>
-						<span>
-							{error ? "ERROR" : playing ? "PLAYING" : "PAUSED"}
-						</span>
+						<span>{status}</span>
 					</div>
 					<div className={styles.stageCanvas}>
-						<div className={styles.stageGrid} aria-hidden="true" />
+						<div aria-hidden="true" className={styles.stageGrid} />
 						<div className={styles.playerWrap}>
 							<div
 								className={styles.playerInner}
-								style={
-									{
-										width: `${size}px`,
-										height: `${size}px`,
-									} as CSSProperties
-								}
+								style={{
+									height: `${size}px`,
+									width: `${size}px`,
+								}}
 							>
 								{error ? (
 									<div className={styles.errBox}>
-										<span className={styles.errLabel}>LOAD ERROR</span>
-										<span className={styles.errMsg}>{error}</span>
+										<span className={styles.errLabel}>
+											LOAD ERROR
+										</span>
+										<span className={styles.errMsg}>
+											{error}
+										</span>
 									</div>
 								) : (
 									<DotLottieReact
-										key={src}
-										src={src}
-										loop={loop}
 										autoplay={autoplay}
-										speed={speed}
-										dotLottieRefCallback={setDotLottie}
 										className={styles.player}
+										dotLottieRefCallback={setDotLottie}
+										key={src}
+										loop={loop}
+										speed={speed}
+										src={src}
 									/>
 								)}
 							</div>
@@ -158,13 +169,13 @@ export const LottieWorkbench = () => {
 				</div>
 
 				<Transport
-					playing={playing}
-					onToggle={togglePlay}
-					onStop={stop}
 					frame={frame}
-					totalFrames={totalFrames}
-					progress={progress}
 					onSeek={handleSeek}
+					onStop={stop}
+					onToggle={togglePlay}
+					playing={playing}
+					progress={progress}
+					totalFrames={totalFrames}
 				/>
 
 				<div className={styles.telemetry}>
@@ -172,10 +183,7 @@ export const LottieWorkbench = () => {
 						<span>PROPERTIES</span>
 						<span>{playing ? "live" : "idle"}</span>
 					</div>
-					<TelemRow
-						k="frame"
-						v={`${frame}/${totalFrames || "—"}`}
-					/>
+					<TelemRow k="frame" v={`${frame}/${totalFrames || "—"}`} />
 					<TelemRow k="duration" v={`${duration.toFixed(2)}s`} />
 					<TelemRow k="speed" v={`${speed.toFixed(2)}x`} />
 					<TelemRow k="loop" v={loop ? "yes" : "no"} />
@@ -184,28 +192,25 @@ export const LottieWorkbench = () => {
 				</div>
 			</aside>
 
-			<section className={styles.canvas}>
-				<div className={styles.section}>
-					<header className={styles.sectionHead}>
-						<h2 className={styles.sectionTitle}>Source</h2>
-						<p className={styles.sectionDesc}>
-							Provide a remote .lottie or .json URL.
-						</p>
-					</header>
+			<section className={shared.canvas}>
+				<div className={shared.section}>
+					<SectionHead title="Source">
+						Provide a remote .lottie or .json URL.
+					</SectionHead>
 					<div className={styles.urlInput}>
 						<span className={styles.urlPrefix}>src</span>
 						<input
-							type="text"
-							value={src}
-							onChange={(e) => setSrc(e.target.value)}
 							className={styles.urlField}
+							onChange={(e) => setSrc(e.target.value)}
 							placeholder="https://lottie.host/…"
 							spellCheck={false}
+							type="text"
+							value={src}
 						/>
 						<button
-							type="button"
 							className={styles.urlClear}
 							onClick={() => setSrc(DEFAULT_SRC)}
+							type="button"
 						>
 							RESET
 						</button>
@@ -213,66 +218,70 @@ export const LottieWorkbench = () => {
 					<div className={styles.samples}>
 						{SAMPLES.map((s) => (
 							<button
-								type="button"
+								className={cn(
+									styles.sampleCard,
+									src === s.src && styles.sampleCardActive
+								)}
 								key={s.src}
-								className={`${styles.sampleCard} ${src === s.src ? styles.sampleCardActive : ""}`}
 								onClick={() => setSrc(s.src)}
+								type="button"
 							>
 								<div className={styles.samplePreview}>
 									<DotLottieReact
-										key={`${s.src}-mini`}
-										src={s.src}
 										autoplay
-										loop
 										className={styles.samplePlayer}
+										key={`${s.src}-mini`}
+										loop
+										src={s.src}
 									/>
 								</div>
 								<div className={styles.sampleMeta}>
-									<span className={styles.sampleLabel}>{s.label}</span>
-									<span className={styles.sampleTag}>{s.tag}</span>
+									<span className={styles.sampleLabel}>
+										{s.label}
+									</span>
+									<span className={styles.sampleTag}>
+										{s.tag}
+									</span>
 								</div>
 							</button>
 						))}
 					</div>
 				</div>
 
-				<div className={styles.section}>
-					<header className={styles.sectionHead}>
-						<h2 className={styles.sectionTitle}>Controls</h2>
-						<p className={styles.sectionDesc}>
-							Configure size, playback speed, and looping.
-						</p>
-					</header>
+				<div className={shared.section}>
+					<SectionHead title="Controls">
+						Configure size, playback speed, and looping.
+					</SectionHead>
 					<div className={styles.controlsGrid}>
 						<ControlSlider
 							label="Size"
-							value={size}
-							onChange={setSize}
-							min={64}
 							max={480}
+							min={64}
+							onChange={setSize}
 							unit="px"
+							value={size}
 						/>
 						<ControlSlider
 							label="Speed"
-							value={speed}
-							onChange={setSpeed}
-							min={0.1}
 							max={3}
+							min={0.1}
+							onChange={setSpeed}
 							step={0.05}
+							ticks={SPEED_TICKS}
 							unit="x"
-							ticks={speedTicks}
+							value={speed}
 						/>
 						<ControlSwitch
-							label="Loop"
 							hint="Repeat continuously"
-							value={loop}
+							label="Loop"
 							onChange={setLoop}
+							value={loop}
 						/>
 						<ControlSwitch
-							label="Autoplay"
 							hint="Begin playback on load"
-							value={autoplay}
+							label="Autoplay"
 							onChange={setAutoplay}
+							value={autoplay}
 						/>
 					</div>
 				</div>
@@ -281,17 +290,42 @@ export const LottieWorkbench = () => {
 	);
 };
 
-/* ────────────────────────────────────────────────────────────────────── */
+const PlayIcon = () => (
+	<svg
+		aria-hidden="true"
+		fill="currentColor"
+		height="16"
+		viewBox="0 0 16 16"
+		width="16"
+	>
+		<path d="M3 2 L13 8 L3 14 Z" />
+	</svg>
+);
+const PauseIcon = () => (
+	<svg
+		aria-hidden="true"
+		fill="currentColor"
+		height="16"
+		viewBox="0 0 16 16"
+		width="16"
+	>
+		<rect height="12" rx="0.5" width="3.5" x="3" y="2" />
+		<rect height="12" rx="0.5" width="3.5" x="9.5" y="2" />
+	</svg>
+);
+const StopIcon = () => (
+	<svg
+		aria-hidden="true"
+		fill="currentColor"
+		height="12"
+		viewBox="0 0 16 16"
+		width="12"
+	>
+		<rect height="12" rx="1" width="12" x="2" y="2" />
+	</svg>
+);
 
-const Transport = ({
-	playing,
-	onToggle,
-	onStop,
-	frame,
-	totalFrames,
-	progress,
-	onSeek,
-}: {
+interface TransportProps {
 	playing: boolean;
 	onToggle: () => void;
 	onStop: () => void;
@@ -299,7 +333,17 @@ const Transport = ({
 	totalFrames: number;
 	progress: number;
 	onSeek: (f: number) => void;
-}) => {
+}
+
+const Transport = ({
+	frame,
+	onSeek,
+	onStop,
+	onToggle,
+	playing,
+	progress,
+	totalFrames,
+}: TransportProps) => {
 	const trackRef = useRef<HTMLDivElement>(null);
 
 	const seekFromEvent = (e: React.PointerEvent) => {
@@ -324,7 +368,6 @@ const Transport = ({
 				</span>
 			</div>
 			<div
-				ref={trackRef}
 				className={styles.timeline}
 				onPointerDown={(e) => {
 					(e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -333,6 +376,7 @@ const Transport = ({
 				onPointerMove={(e) => {
 					if (e.buttons === 1) seekFromEvent(e);
 				}}
+				ref={trackRef}
 			>
 				<div
 					className={styles.timelineFill}
@@ -342,43 +386,32 @@ const Transport = ({
 					className={styles.timelineHead}
 					style={{ left: `${progress}%` }}
 				/>
-				<div className={styles.timelineTicks} aria-hidden="true">
-					{Array.from({ length: 9 }, (_, idx) => (
+				<div aria-hidden="true" className={styles.timelineTicks}>
+					{TIMELINE_TICKS.map((t) => (
 						<span
-							key={idx}
 							className={styles.timelineTick}
-							style={{ left: `${(idx / 8) * 100}%` }}
+							key={t.id}
+							style={{ left: t.left }}
 						/>
 					))}
 				</div>
 			</div>
 			<div className={styles.transportButtons}>
 				<button
-					type="button"
+					aria-label={playing ? "Pause" : "Play"}
 					className={styles.playBtn}
 					onClick={onToggle}
-					aria-label={playing ? "Pause" : "Play"}
+					type="button"
 				>
-					{playing ? (
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-							<rect x="3" y="2" width="3.5" height="12" rx="0.5" />
-							<rect x="9.5" y="2" width="3.5" height="12" rx="0.5" />
-						</svg>
-					) : (
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-							<path d="M3 2 L13 8 L3 14 Z" />
-						</svg>
-					)}
+					{playing ? <PauseIcon /> : <PlayIcon />}
 				</button>
 				<button
-					type="button"
+					aria-label="Stop"
 					className={styles.stopBtn}
 					onClick={onStop}
-					aria-label="Stop"
+					type="button"
 				>
-					<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-						<rect x="2" y="2" width="12" height="12" rx="1" />
-					</svg>
+					<StopIcon />
 				</button>
 			</div>
 		</div>
@@ -389,18 +422,20 @@ const TelemRow = ({ k, v }: { k: string; v: string }) => {
 	const [flash, setFlash] = useState(false);
 	const prev = useRef(v);
 	useEffect(() => {
-		if (prev.current !== v) {
-			setFlash(true);
-			const t = setTimeout(() => setFlash(false), 600);
-			prev.current = v;
-			return () => clearTimeout(t);
-		}
+		if (prev.current === v) return;
+		prev.current = v;
+		setFlash(true);
+		const t = setTimeout(() => setFlash(false), 600);
+		return () => clearTimeout(t);
 	}, [v]);
 	return (
 		<div className={styles.telemetryRow}>
 			<span
-				className={`${styles.measureMark} ${flash ? styles.measureMarkFlash : ""}`}
 				aria-hidden="true"
+				className={cn(
+					styles.measureMark,
+					flash && styles.measureMarkFlash
+				)}
 			/>
 			<dt className={styles.telemetryKey}>{k}</dt>
 			<dd className={styles.telemetryVal}>{v}</dd>
@@ -408,16 +443,7 @@ const TelemRow = ({ k, v }: { k: string; v: string }) => {
 	);
 };
 
-const ControlSlider = ({
-	label,
-	value,
-	onChange,
-	min,
-	max,
-	step = 1,
-	unit,
-	ticks,
-}: {
+interface ControlSliderProps {
 	label: string;
 	value: number;
 	onChange: (n: number) => void;
@@ -426,7 +452,18 @@ const ControlSlider = ({
 	step?: number;
 	unit: string;
 	ticks?: number[];
-}) => (
+}
+
+const ControlSlider = ({
+	label,
+	max,
+	min,
+	onChange,
+	step = 1,
+	ticks,
+	unit,
+	value,
+}: ControlSliderProps) => (
 	<div className={styles.control}>
 		<div className={styles.controlHead}>
 			<span className={styles.controlLabel}>{label}</span>
@@ -436,50 +473,54 @@ const ControlSlider = ({
 			</span>
 		</div>
 		<input
-			type="range"
 			className={styles.controlRange}
-			min={min}
 			max={max}
-			step={step}
-			value={value}
+			min={min}
 			onChange={(e) => onChange(Number(e.target.value))}
+			step={step}
+			type="range"
+			value={value}
 		/>
-		{ticks && (
+		{ticks ? (
 			<div className={styles.controlTicks}>
 				{ticks.map((t) => (
 					<button
+						className={cn(
+							styles.controlTick,
+							Math.abs(value - t) < 0.01 &&
+								styles.controlTickActive
+						)}
 						key={t}
-						type="button"
-						className={`${styles.controlTick} ${
-							Math.abs(value - t) < 0.01 ? styles.controlTickActive : ""
-						}`}
 						onClick={() => onChange(t)}
+						type="button"
 					>
 						{t}
 						{unit}
 					</button>
 				))}
 			</div>
-		)}
+		) : null}
 	</div>
 );
 
-const ControlSwitch = ({
-	label,
-	hint,
-	value,
-	onChange,
-}: {
+interface ControlSwitchProps {
 	label: string;
 	hint: string;
 	value: boolean;
 	onChange: (v: boolean) => void;
-}) => (
+}
+
+const ControlSwitch = ({
+	hint,
+	label,
+	onChange,
+	value,
+}: ControlSwitchProps) => (
 	<button
-		type="button"
 		className={styles.switch}
-		onClick={() => onChange(!value)}
 		data-state={value ? "on" : "off"}
+		onClick={() => onChange(!value)}
+		type="button"
 	>
 		<div className={styles.switchHead}>
 			<span className={styles.controlLabel}>{label}</span>
@@ -490,4 +531,3 @@ const ControlSwitch = ({
 		<span className={styles.switchHint}>{hint}</span>
 	</button>
 );
-

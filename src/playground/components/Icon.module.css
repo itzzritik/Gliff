@@ -1,42 +1,3 @@
-/* ──────────────────────────────────────────────────────────────────────
- * Icon workbench — Specimen aesthetic
- * ────────────────────────────────────────────────────────────────────── */
-
-.workbench {
-	display: grid;
-	grid-template-columns: var(--sidebar-w) 1fr;
-	gap: var(--space-6);
-	padding: var(--space-6);
-	max-width: 1680px;
-	margin: 0 auto;
-}
-
-.sidebar {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-6);
-	position: sticky;
-	top: calc(var(--chrome-h) + var(--space-6));
-	align-self: start;
-}
-
-.canvas {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-8);
-	min-width: 0;
-}
-
-@media (max-width: 1024px) {
-	.workbench {
-		grid-template-columns: 1fr;
-	}
-	.sidebar {
-		position: static;
-	}
-}
-
-/* ── Specimen ─────────────────────────────────────────────────────────── */
 .specimen {
 	position: relative;
 	border: 1px solid var(--hairline);
@@ -111,7 +72,16 @@
 	animation: glyph-pop 380ms var(--ease-precision);
 }
 
-/* ── Size scrubber ───────────────────────────────────────────────────── */
+.metaItem {
+	position: relative;
+}
+.metaItem + .metaItem::before {
+	content: "·";
+	position: absolute;
+	left: -10px;
+	color: var(--subtle);
+}
+
 .scrubber {
 	display: flex;
 	flex-direction: column;
@@ -267,78 +237,6 @@
 	color: var(--accent);
 }
 
-/* ── Shared circular copy button ─────────────────────────────────────── */
-.copyBtn {
-	display: inline-flex;
-	align-items: center;
-	width: 28px;
-	height: 28px;
-	padding: 0 0 0 8px;
-	color: var(--muted);
-	background: transparent;
-	border: 1px solid var(--hairline-strong);
-	border-radius: 999px;
-	overflow: hidden;
-	white-space: nowrap;
-	cursor: pointer;
-	transition:
-		width 280ms var(--ease-precision),
-		color 180ms var(--ease-precision),
-		background 180ms var(--ease-precision),
-		border-color 180ms var(--ease-precision);
-}
-.copyBtn:hover {
-	color: var(--fg);
-	border-color: var(--accent);
-}
-.copyBtn:active {
-	transform: scale(0.94);
-}
-.copyBtn[data-state="copied"] {
-	width: 92px;
-	color: #fff;
-	background: var(--accent);
-	border-color: var(--accent);
-}
-
-.copyIcon {
-	flex-shrink: 0;
-}
-
-.copyLabel {
-	font-family: var(--font-mono);
-	font-size: 10px;
-	font-weight: 500;
-	letter-spacing: 0.12em;
-	margin-left: 6px;
-	opacity: 0;
-	transition: opacity 160ms var(--ease-precision) 120ms;
-}
-.copyBtn[data-state="copied"] .copyLabel {
-	opacity: 1;
-}
-
-.metaItem {
-	position: relative;
-}
-.metaItem + .metaItem::before {
-	content: "·";
-	position: absolute;
-	left: -10px;
-	color: var(--subtle);
-}
-
-/* ── Number flip ─────────────────────────────────────────────────────── */
-.flipNum {
-	display: inline-flex;
-	font-variant-numeric: tabular-nums;
-}
-.flipDigit {
-	display: inline-block;
-	animation: digit-slide-up 260ms var(--ease-precision);
-}
-
-/* ── Snippet — VSCode-like: no header, line numbers, very dark bg ────── */
 .snippet {
 	position: relative;
 	border: 1px solid var(--hairline);
@@ -353,12 +251,6 @@
 	top: var(--space-3);
 	right: var(--space-3);
 	z-index: 2;
-	background: rgba(255, 255, 255, 0.04);
-	color: rgba(245, 241, 234, 0.6);
-	border-color: rgba(245, 241, 234, 0.12);
-}
-.snippetCopy:hover {
-	color: rgba(245, 241, 234, 1);
 }
 
 .snippetBody {
@@ -408,43 +300,6 @@
 	color: var(--accent);
 }
 
-/* ── Section heads (shared by Matrix & Catalog) ──────────────────────── */
-.section {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-4);
-	animation: fade-up var(--dur-slow) var(--ease-precision) 260ms both;
-}
-
-.sectionHead {
-	padding-bottom: var(--space-3);
-	border-bottom: 1px solid var(--hairline);
-}
-
-.sectionTitle {
-	margin: 0;
-	font-family: var(--font-display);
-	font-weight: 400;
-	font-size: 28px;
-	letter-spacing: -0.015em;
-	color: var(--fg);
-	line-height: 1.05;
-}
-
-.sectionDesc {
-	margin: var(--space-2) 0 0;
-	font-size: 13px;
-	color: var(--muted);
-	max-width: 600px;
-}
-
-.sectionDesc em {
-	font-style: normal;
-	color: var(--fg);
-	font-weight: 600;
-}
-
-/* ── Variant matrix ──────────────────────────────────────────────────── */
 .matrix {
 	position: relative;
 	display: grid;
@@ -456,8 +311,7 @@
 	background: var(--bg-elev);
 }
 
-/* Corner cells get matching radius so the active inset outline follows the
- * rounded path of the matrix instead of getting clipped at the corners. */
+/* Corner cells get matching radius so the active inset outline follows the rounded path instead of clipping at corners. */
 .matrix .cell:first-child {
 	border-top-left-radius: var(--radius-3);
 }
@@ -475,7 +329,6 @@
 	.matrix {
 		grid-template-columns: repeat(4, 1fr);
 	}
-	/* Reset 8-col corners, set 4-col corners */
 	.matrix .cell:nth-child(8) {
 		border-top-right-radius: 0;
 	}
@@ -560,7 +413,6 @@
 	text-transform: uppercase;
 }
 
-/* ── Glyph catalog ───────────────────────────────────────────────────── */
 .catalogSearch {
 	position: relative;
 	display: flex;

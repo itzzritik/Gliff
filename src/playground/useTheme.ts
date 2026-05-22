@@ -6,8 +6,9 @@ const STORAGE_KEY = "gliff-theme";
 
 const getInitial = (): Theme => {
 	if (typeof document === "undefined") return "dark";
-	const attr = document.documentElement.getAttribute("data-theme");
-	return attr === "light" ? "light" : "dark";
+	return document.documentElement.getAttribute("data-theme") === "light"
+		? "light"
+		: "dark";
 };
 
 export const useTheme = () => {
@@ -17,15 +18,12 @@ export const useTheme = () => {
 		document.documentElement.setAttribute("data-theme", theme);
 		try {
 			localStorage.setItem(STORAGE_KEY, theme);
-		} catch {}
+		} catch {
+			// Storage may be unavailable (private browsing, quota); pre-paint script handles read fallback.
+		}
 	}, [theme]);
 
 	const toggle = useCallback((origin?: { x: number; y: number }) => {
-		const next: Theme =
-			document.documentElement.getAttribute("data-theme") === "light"
-				? "dark"
-				: "light";
-
 		if (origin) {
 			document.documentElement.style.setProperty(
 				"--theme-x",
@@ -37,18 +35,13 @@ export const useTheme = () => {
 			);
 		}
 
-		const startTransition = (
-			document as Document & {
-				startViewTransition?: (cb: () => void) => unknown;
-			}
-		).startViewTransition;
+		const swap = () =>
+			setTheme((prev) => (prev === "light" ? "dark" : "light"));
 
-		if (typeof startTransition === "function") {
-			startTransition.call(document, () => {
-				setTheme(next);
-			});
+		if (typeof document.startViewTransition === "function") {
+			document.startViewTransition(swap);
 		} else {
-			setTheme(next);
+			swap();
 		}
 	}, []);
 
