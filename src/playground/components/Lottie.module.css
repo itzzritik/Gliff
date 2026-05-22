@@ -155,8 +155,7 @@
 	border-radius: 999px;
 	box-shadow:
 		0 0 0 3px var(--bg-elev),
-		0 0 0 4px var(--accent),
-		0 0 12px var(--accent-glow);
+		0 0 0 4px var(--accent);
 	transform: translate(-50%, -50%);
 	pointer-events: none;
 }
@@ -195,7 +194,6 @@
 }
 .playBtn:hover {
 	transform: scale(1.06);
-	box-shadow: 0 0 20px var(--accent-glow);
 }
 .playBtn:active {
 	transform: scale(0.96);

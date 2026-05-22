@@ -108,3 +108,88 @@ export const NumberFlip = ({ value }: { value: number | string }) => {
 		</span>
 	);
 };
+
+export const Card = ({
+	icon,
+	label,
+	meta,
+	active,
+	onClick,
+	title,
+}: {
+	icon: ReactNode;
+	label: string;
+	meta?: string;
+	active?: boolean;
+	onClick: () => void;
+	title?: string;
+}) => (
+	<button
+		className={cn(styles.card, active && styles.cardActive)}
+		onClick={onClick}
+		title={title}
+		type="button"
+	>
+		<div className={styles.cardIcon}>{icon}</div>
+		<span className={styles.cardLabel}>{label}</span>
+		{meta ? <span className={styles.cardMeta}>{meta}</span> : null}
+	</button>
+);
+
+export const SearchBar = ({
+	placeholder,
+	value,
+	onChange,
+	matched,
+	total,
+}: {
+	placeholder: string;
+	value: string;
+	onChange: (q: string) => void;
+	matched: number;
+	total: number;
+}) => (
+	<div className={styles.searchBar}>
+		<svg
+			aria-hidden="true"
+			className={styles.searchIcon}
+			height="14"
+			viewBox="0 0 16 16"
+			width="14"
+		>
+			<circle cx="7" cy="7" fill="none" r="5" stroke="currentColor" />
+			<line stroke="currentColor" x1="11" x2="14" y1="11" y2="14" />
+		</svg>
+		<input
+			className={styles.searchInput}
+			onChange={(e) => onChange(e.target.value)}
+			placeholder={placeholder}
+			type="text"
+			value={value}
+		/>
+		{value ? (
+			<button
+				aria-label="Clear search"
+				className={styles.searchClear}
+				onClick={() => onChange("")}
+				type="button"
+			>
+				<svg
+					aria-hidden="true"
+					height="12"
+					stroke="currentColor"
+					strokeLinecap="round"
+					strokeWidth="1.6"
+					viewBox="0 0 16 16"
+					width="12"
+				>
+					<line x1="4" x2="12" y1="4" y2="12" />
+					<line x1="12" x2="4" y1="4" y2="12" />
+				</svg>
+			</button>
+		) : null}
+		<span className={styles.searchCount}>
+			<NumberFlip value={matched} />/<NumberFlip value={total} />
+		</span>
+	</div>
+);

@@ -1,9 +1,24 @@
-import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+	type CSSProperties,
+	type ReactNode,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { Icon, type TIconProps } from "../../components/Icon/Icon";
 import { cn } from "../../utils/cn";
 import { type IconData, useIconData } from "../useIconData";
 import styles from "./Icon.module.css";
-import { CopyButton, iconSize, NumberFlip, SectionHead } from "./shared";
+import {
+	Card,
+	CopyButton,
+	iconSize,
+	NumberFlip,
+	SearchBar,
+	SectionHead,
+} from "./shared";
 import shared from "./shared.module.css";
 
 type TSet = NonNullable<TIconProps["set"]>;
@@ -197,7 +212,6 @@ export const IconWorkbench = () => {
 	const [code, setCode] = useState("f007");
 	const [activeIdx, setActiveIdx] = useState(DEFAULT_VARIANT_IDX);
 	const [size, setSize] = useState(96);
-	const [query, setQuery] = useState("");
 
 	const iconData = useIconData();
 	const active = VARIANTS[activeIdx];
@@ -206,14 +220,6 @@ export const IconWorkbench = () => {
 		() => supportedVariantIndices(iconData, code),
 		[iconData, code]
 	);
-
-	const filtered = useMemo(() => {
-		const q = query.toLowerCase().trim();
-		if (!q) return POPULAR_GLYPHS;
-		return POPULAR_GLYPHS.filter(
-			(g) => g.code.includes(q) || g.name.includes(q)
-		);
-	}, [query]);
 
 	return (
 		<div className={shared.workbench}>
@@ -238,12 +244,8 @@ export const IconWorkbench = () => {
 				<GlyphCatalog
 					activeCode={code}
 					activeVariant={active}
-					glyphs={filtered}
 					iconData={iconData}
 					onPick={setCode}
-					onQuery={setQuery}
-					query={query}
-					total={POPULAR_GLYPHS.length}
 				/>
 			</section>
 		</div>
@@ -386,7 +388,6 @@ const Snippet = ({
 	return (
 		<div className={styles.snippet}>
 			<CopyButton
-				appearance="dark"
 				className={styles.snippetCopy}
 				onCopy={() => navigator.clipboard.writeText(text)}
 			/>
@@ -448,128 +449,188 @@ const VariantMatrix = ({
 	onPick: (idx: number) => void;
 	supported: Set<number> | null;
 }) => {
-	const visible = supported
-		? VARIANTS.map((v, i) => ({ v, i })).filter(({ i }) => supported.has(i))
-		: VARIANTS.map((v, i) => ({ v, i }));
+	const [query, setQuery] = useState("");
+
+	const supportedList = useMemo(() => {
+		const all = VARIANTS.map((v, i) => ({ v, i }));
+		return supported ? all.filter(({ i }) => supported.has(i)) : all;
+	}, [supported]);
+
+	const visible = useMemo(() => {
+		const q = query.toLowerCase().trim();
+		if (!q) return supportedList;
+		return supportedList.filter(
+			({ v }) =>
+				v.family.toLowerCase().includes(q) ||
+				(v.style || "").toLowerCase().includes(q)
+		);
+	}, [supportedList, query]);
 
 	return (
 		<div className={shared.section}>
 			<SectionHead title="Variants">
 				Selected glyph rendered across{" "}
-				<NumberFlip value={visible.length} /> available styles.
+				<NumberFlip value={supportedList.length} /> available styles.
 			</SectionHead>
-			<div className={styles.matrix}>
-				{visible.map(({ v, i }, displayIdx) => (
-					<button
-						className={cn(
-							styles.cell,
-							i === activeIdx && styles.cellActive
-						)}
-						key={`${v.set}-${v.type ?? "x"}`}
-						onClick={() => onPick(i)}
-						style={{ animationDelay: `${displayIdx * 14}ms` }}
-						type="button"
-					>
-						<div className={styles.cellGlyph}>
-							{renderIcon(code, v.set, v.type, 28)}
-						</div>
-						<div className={styles.cellMeta}>
-							<span className={styles.cellFamily}>{v.family}</span>
-							<span className={styles.cellStyle}>{v.style}</span>
-						</div>
-					</button>
-				))}
+			<SearchBar
+				matched={visible.length}
+				onChange={setQuery}
+				placeholder="Filter by family or style…"
+				total={supportedList.length}
+				value={query}
+			/>
+			<div className={shared.gridFrame}>
+				{visible.length === 0 ? (
+					<div className={shared.gridEmpty}>
+						No matches for <em>"{query}"</em>
+					</div>
+				) : (
+					<div className={shared.gridGrid}>
+						{visible.map(({ v, i }) => (
+							<Card
+								active={i === activeIdx}
+								icon={renderIcon(code, v.set, v.type, 24)}
+								key={`${v.set}-${v.type ?? "x"}`}
+								label={v.family}
+								meta={v.style || undefined}
+								onClick={() => onPick(i)}
+							/>
+						))}
+					</div>
+				)}
 			</div>
 		</div>
 	);
 };
 
+const CELL_MIN_WIDTH = 110;
+const CELL_HEIGHT = 100;
+const ROW_GAP = 8;
+const ROW_TOTAL = CELL_HEIGHT + ROW_GAP;
+
 const GlyphCatalog = ({
 	activeCode,
 	activeVariant,
-	glyphs,
 	iconData,
 	onPick,
-	onQuery,
-	query,
-	total,
 }: {
 	activeCode: string;
 	activeVariant: Variant;
-	glyphs: Glyph[];
 	iconData: IconData | null;
 	onPick: (c: string) => void;
-	onQuery: (q: string) => void;
-	query: string;
-	total: number;
-}) => (
-	<div className={shared.section}>
-		<SectionHead title="Glyphs">
-			<NumberFlip value={total} /> common glyphs in{" "}
-			<em>
-				{activeVariant.family} {activeVariant.style}
-			</em>
-			.
-		</SectionHead>
-		<div className={styles.catalogSearch}>
-			<svg
-				aria-hidden="true"
-				className={styles.searchIcon}
-				height="14"
-				viewBox="0 0 16 16"
-				width="14"
-			>
-				<circle cx="7" cy="7" fill="none" r="5" stroke="currentColor" />
-				<line stroke="currentColor" x1="11" x2="14" y1="11" y2="14" />
-			</svg>
-			<input
-				className={styles.catalogInput}
-				onChange={(e) => onQuery(e.target.value)}
+}) => {
+	const [query, setQuery] = useState("");
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const [cols, setCols] = useState(8);
+
+	const allGlyphs = useMemo<Glyph[]>(() => {
+		if (!iconData) return POPULAR_GLYPHS;
+		return Object.entries(iconData.glyphs).map(([code, { n }]) => ({
+			code,
+			name: n,
+		}));
+	}, [iconData]);
+
+	const visible = useMemo(() => {
+		const q = query.toLowerCase().trim();
+		if (!q) return allGlyphs;
+		return allGlyphs.filter(
+			(g) => g.code.includes(q) || g.name.includes(q)
+		);
+	}, [query, allGlyphs]);
+
+	useEffect(() => {
+		const el = scrollRef.current;
+		if (!el) return;
+		const ro = new ResizeObserver(([entry]) => {
+			const w = entry.contentRect.width;
+			setCols(
+				Math.max(
+					1,
+					Math.floor((w + ROW_GAP) / (CELL_MIN_WIDTH + ROW_GAP))
+				)
+			);
+		});
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, []);
+
+	const rowCount = Math.ceil(visible.length / cols);
+	const virtualizer = useVirtualizer({
+		count: rowCount,
+		getScrollElement: () => scrollRef.current,
+		estimateSize: () => ROW_TOTAL,
+		overscan: 5,
+	});
+
+	return (
+		<div className={shared.section}>
+			<SectionHead title="Glyphs">
+				<NumberFlip value={allGlyphs.length} /> glyphs in{" "}
+				<em>
+					{activeVariant.family} {activeVariant.style}
+				</em>
+				.
+			</SectionHead>
+			<SearchBar
+				matched={visible.length}
+				onChange={setQuery}
 				placeholder="Filter by name or unicode hex…"
-				type="text"
+				total={allGlyphs.length}
 				value={query}
 			/>
-			<span className={styles.catalogCount}>
-				<NumberFlip value={glyphs.length} />/
-				<NumberFlip value={total} />
-			</span>
-		</div>
-		<div className={styles.catalog}>
-			{glyphs.length === 0 ? (
-				<div className={styles.catalogEmpty}>
-					No matches for <em>"{query}"</em>
-				</div>
-			) : (
-				glyphs.map((g, idx) => {
-					const v = variantForGlyph(iconData, g.code, activeVariant);
-					return (
-					<button
-						className={cn(
-							styles.glyphCell,
-							activeCode === g.code && styles.glyphCellActive
-						)}
-						key={g.code}
-						onClick={() => onPick(g.code)}
+			<div
+				className={cn(shared.gridFrame, shared.gridFrameScroll)}
+				ref={scrollRef}
+			>
+				{visible.length === 0 ? (
+					<div className={shared.gridEmpty}>
+						No matches for <em>"{query}"</em>
+					</div>
+				) : (
+					<div
 						style={{
-							animationDelay: `${Math.min(idx * 8, 400)}ms`,
+							height: virtualizer.getTotalSize(),
+							position: "relative",
 						}}
-						title={`${g.name} · ${g.code}`}
-						type="button"
 					>
-						<div className={styles.glyphCellIcon}>
-							{renderIcon(
-								g.code,
-								v.set,
-								v.type,
-								22
-							)}
-						</div>
-						<span className={styles.glyphCellCode}>{g.code}</span>
-						<span className={styles.glyphCellName}>{g.name}</span>
-					</button>
-				);
-				})
-			)}
+						{virtualizer.getVirtualItems().map((row) => {
+							const start = row.index * cols;
+							const rowGlyphs = visible.slice(start, start + cols);
+							return (
+								<div
+									className={shared.gridRow}
+									key={row.key}
+									style={{
+										transform: `translateY(${row.start}px)`,
+										gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+										height: row.size,
+									}}
+								>
+									{rowGlyphs.map((g) => {
+										const v = variantForGlyph(
+											iconData,
+											g.code,
+											activeVariant
+										);
+										return (
+											<Card
+												active={activeCode === g.code}
+												icon={renderIcon(g.code, v.set, v.type, 24)}
+												key={g.code}
+												label={g.name}
+												meta={g.code}
+												onClick={() => onPick(g.code)}
+												title={`${g.name} · ${g.code}`}
+											/>
+										);
+									})}
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</div>
 		</div>
-	</div>
-);
+	);
+};

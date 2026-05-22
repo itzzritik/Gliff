@@ -1,8 +1,14 @@
 import { type DotLottie, DotLottieReact } from "@lottiefiles/dotlottie-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { cn } from "../../utils/cn";
 import styles from "./Lottie.module.css";
-import { SectionHead } from "./shared";
+import { SearchBar, SectionHead } from "./shared";
 import shared from "./shared.module.css";
 
 interface Sample {
@@ -61,6 +67,17 @@ export const LottieWorkbench = () => {
 	const [speed, setSpeed] = useState(1);
 	const [loop, setLoop] = useState(true);
 	const [autoplay, setAutoplay] = useState(true);
+	const [sampleQuery, setSampleQuery] = useState("");
+
+	const filteredSamples = useMemo(() => {
+		const q = sampleQuery.toLowerCase().trim();
+		if (!q) return SAMPLES;
+		return SAMPLES.filter(
+			(s) =>
+				s.label.toLowerCase().includes(q) ||
+				s.tag.toLowerCase().includes(q)
+		);
+	}, [sampleQuery]);
 
 	const [dotLottie, setDotLottie] = useState<DotLottie | null>(null);
 	const [frame, setFrame] = useState(0);
@@ -215,8 +232,15 @@ export const LottieWorkbench = () => {
 							RESET
 						</button>
 					</div>
+					<SearchBar
+						matched={filteredSamples.length}
+						onChange={setSampleQuery}
+						placeholder="Filter samples by name or tag…"
+						total={SAMPLES.length}
+						value={sampleQuery}
+					/>
 					<div className={styles.samples}>
-						{SAMPLES.map((s) => (
+						{filteredSamples.map((s) => (
 							<button
 								className={cn(
 									styles.sampleCard,
