@@ -1,40 +1,37 @@
 import { type DotLottie, DotLottieReact } from "@lottiefiles/dotlottie-react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
-import { lottieUrl } from "../../utils/assets";
-import { useUrlState } from "../../utils/useUrlState";
+import {
+	PLAYGROUND_LOTTIE_IMPORT_URL,
+	playgroundLottieUrl as lottieUrl,
+} from "../assets";
+import { useUrlState } from "../useUrlState";
 import { useLottieIndex } from "../useLottieIndex";
+import { type LFItem, useLottieFiles } from "../useLottieFiles";
 import styles from "./Lottie.module.css";
-import { Card, Preview, Scrubber, SearchBar, SectionHead } from "./shared";
+import { Card, Preview, Scrubber, SearchBar, SectionHead, Spinner } from "./shared";
 import shared from "./shared.module.css";
-
-const CELL_MIN_WIDTH = 110;
-const CELL_HEIGHT = 110;
-const ROW_GAP = 8;
-const ROW_TOTAL = CELL_HEIGHT + ROW_GAP;
 
 const DEFAULT_LOTTIE = "SpacemanHappy";
 const DEFAULT_SRC = lottieUrl(DEFAULT_LOTTIE);
 
-const paramToSrc = (param: string): string =>
-	param.includes("://") ? param : lottieUrl(param);
-
-const srcToParam = (src: string): string => {
-	const match = src.match(/\/anim\/lottie\/([^/]+)\.lottie$/);
-	return match ? match[1] : src;
-};
+const ASSETS_LOTTIE_RE = /\/anim\/lottie\/([^/]+)\.lottie$/;
+const FILE_EXT_RE = /\.(lottie|json)$/i;
 
 const SIZE_MIN = 64;
 const SIZE_MAX = 480;
 const SIZE_TICKS = [64, 120, 180, 240, 320, 400, 480];
 const SPEED_TICKS = [0.25, 0.5, 1, 1.5, 2, 3];
+
+type Tab = "library" | "lottiefiles";
+
+const TABS: { id: Tab; label: string }[] = [
+	{ id: "library", label: "Library" },
+	{ id: "lottiefiles", label: "LottieFiles" },
+];
+
+const isLottieFilesUrl = (src: string): boolean =>
+	src.includes("lottie.host") || src.includes("lottiefiles.com");
 
 const toLabel = (name: string): string =>
 	name
@@ -55,14 +52,75 @@ interface DLBus {
 
 const asBus = (dl: DotLottie) => dl as unknown as DLBus;
 
+const useDebounce = <T,>(value: T, delay: number) => {
+	const [debounced, setDebounced] = useState(value);
+	useEffect(() => {
+		const t = setTimeout(() => setDebounced(value), delay);
+		return () => clearTimeout(t);
+	}, [value, delay]);
+	return debounced;
+};
+
+type ImportResult =
+	| { ok: true; slug: string; files: string[] }
+	| { ok: false; status: number; reason: string; signInUrl?: string };
+
+const importLottie = async (
+	slug: string,
+	dotLottieUrl: string,
+): Promise<ImportResult> => {
+	const res = await fetch(PLAYGROUND_LOTTIE_IMPORT_URL, {
+		method: "POST",
+		credentials: "include",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ slug, dotLottieUrl }),
+	});
+	const body = (await res.json().catch(() => ({}))) as {
+		ok?: true;
+		slug?: string;
+		files?: string[];
+		reason?: string;
+		signInUrl?: string;
+	};
+	if (res.ok && body.ok) {
+		return { ok: true, slug: body.slug ?? slug, files: body.files ?? [] };
+	}
+	return {
+		ok: false,
+		status: res.status,
+		reason: body.reason ?? res.statusText,
+		signInUrl: body.signInUrl,
+	};
+};
+
 export const LottieWorkbench = () => {
-	const [lottieParam, setLottieParam] = useUrlState("lottie", DEFAULT_LOTTIE);
-	const src = paramToSrc(lottieParam);
-	const setSrc = (next: string) => setLottieParam(srcToParam(next));
+	const { files, addLocal, replace } = useLottieIndex();
+	// Library slug persists in the URL (so deep-links to a curated lottie work).
+	// Any non-library src (LottieFiles card, pasted custom URL) lives only in memory —
+	// reloading the page resets to the default library card.
+	const [librarySlug, setLibrarySlug] = useUrlState("lottie", DEFAULT_LOTTIE);
+	const [overrideSrc, setOverrideSrc] = useState<string | null>(null);
+	const src = overrideSrc ?? lottieUrl(librarySlug);
+	const setSrc = useCallback(
+		(next: string) => {
+			const match = next.match(ASSETS_LOTTIE_RE);
+			if (match) {
+				setOverrideSrc(null);
+				setLibrarySlug(match[1]);
+			} else {
+				setOverrideSrc(next);
+				setLibrarySlug(DEFAULT_LOTTIE);
+			}
+		},
+		[setLibrarySlug],
+	);
 	const [size, setSize] = useState(240);
 	const [speed, setSpeed] = useState(1);
 	const [loop, setLoop] = useState(true);
 	const [autoplay, setAutoplay] = useState(true);
+	const [tab, setTab] = useState<Tab>("library");
+	const [query, setQuery] = useState("");
+	const debouncedQuery = useDebounce(query, 350);
 
 	const [dotLottie, setDotLottie] = useState<DotLottie | null>(null);
 	const [frame, setFrame] = useState(0);
@@ -72,13 +130,23 @@ export const LottieWorkbench = () => {
 	const [error, setError] = useState<string | null>(null);
 	const [previewReady, setPreviewReady] = useState(false);
 
+	const lfMode: "featured" | "search" = debouncedQuery ? "search" : "featured";
+	const lfState = useLottieFiles({
+		tab: lfMode,
+		query: lfMode === "search" ? debouncedQuery : undefined,
+		enabled: tab === "lottiefiles",
+	});
+
+	const [activeLfItem, setActiveLfItem] = useState<LFItem | null>(null);
+	const [importing, setImporting] = useState(false);
+
 	useEffect(() => {
 		const t = setTimeout(() => setPreviewReady(true), 1500);
 		return () => clearTimeout(t);
 	}, []);
 
 	useEffect(() => {
-		if (!previewReady || !dotLottie || !autoplay) return;
+		if (!(previewReady && dotLottie && autoplay)) return;
 		dotLottie.play();
 	}, [previewReady, dotLottie, autoplay]);
 
@@ -118,7 +186,7 @@ export const LottieWorkbench = () => {
 		(f: number) => {
 			if (dotLottie) asBus(dotLottie).setFrame(f);
 		},
-		[dotLottie]
+		[dotLottie],
 	);
 
 	const togglePlay = useCallback(() => {
@@ -134,11 +202,14 @@ export const LottieWorkbench = () => {
 	const progress = totalFrames > 0 ? (frame / totalFrames) * 100 : 0;
 
 	const lottieName = useMemo(() => {
-		const match = src.match(/\/anim\/lottie\/([^/]+)\.lottie$/);
+		const match = src.match(ASSETS_LOTTIE_RE);
 		if (match) return toLabel(match[1]);
+		if (activeLfItem && activeLfItem.dotLottieUrl === src) return activeLfItem.name;
 		const last = src.split("/").pop() ?? "";
-		return last.replace(/\.(lottie|json)$/i, "") || "Custom";
-	}, [src]);
+		return last.replace(FILE_EXT_RE, "") || "Custom";
+	}, [src, activeLfItem]);
+
+	const indexedSlugs = useMemo(() => new Set(files ?? []), [files]);
 
 	const previewMeta = [
 		lottieName,
@@ -147,6 +218,51 @@ export const LottieWorkbench = () => {
 		totalFrames ? `${totalFrames}f` : null,
 		`${speed.toFixed(2)}x`,
 	];
+
+	const isLfSrc = isLottieFilesUrl(src);
+	const importableItem = activeLfItem && activeLfItem.dotLottieUrl === src
+		? activeLfItem
+		: null;
+	const alreadyImported = importableItem
+		? indexedSlugs.has(importableItem.slug)
+		: false;
+	const showImport = isLfSrc && importableItem && !alreadyImported;
+
+	const onImport = useCallback(async () => {
+		if (!importableItem) return;
+		setImporting(true);
+		try {
+			const result = await importLottie(
+				importableItem.slug,
+				importableItem.dotLottieUrl,
+			);
+			if (result.ok) {
+				if (result.files.length) replace(result.files);
+				else addLocal(result.slug);
+			} else if (result.status === 401 && result.signInUrl) {
+				window.open(result.signInUrl, "_blank", "noopener");
+			} else if (result.status === 409) {
+				addLocal(importableItem.slug);
+			}
+		} finally {
+			setImporting(false);
+		}
+	}, [importableItem, addLocal, replace]);
+
+	const handlePick = useCallback(
+		(url: string, item?: LFItem) => {
+			setSrc(url);
+			setActiveLfItem(item ?? null);
+		},
+		[setSrc],
+	);
+
+	const headerAction = showImport ? (
+		<HeaderActionButton disabled={importing} onClick={onImport}>
+			{importing ? <Spinner label="Importing" size={12} /> : <ImportIcon />}
+			{importing ? "Saving…" : "Import"}
+		</HeaderActionButton>
+	) : null;
 
 	return (
 		<div className={shared.workbench}>
@@ -173,9 +289,8 @@ export const LottieWorkbench = () => {
 							/>
 						</>
 					}
-					copyLabel="Src"
+					headerAction={headerAction}
 					meta={previewMeta}
-					onCopy={() => navigator.clipboard.writeText(src)}
 					title="Preview"
 				>
 					<div
@@ -184,9 +299,7 @@ export const LottieWorkbench = () => {
 					>
 						{error ? (
 							<div className={styles.errBox}>
-								<span className={styles.errLabel}>
-									LOAD ERROR
-								</span>
+								<span className={styles.errLabel}>LOAD ERROR</span>
 								<span className={styles.errMsg}>{error}</span>
 							</div>
 						) : (
@@ -215,16 +328,25 @@ export const LottieWorkbench = () => {
 				<div className={styles.urlInput}>
 					<input
 						className={styles.urlField}
-						onChange={(e) => setSrc(e.target.value)}
+						onChange={(e) => handlePick(e.target.value)}
 						placeholder="https://lottie.host/…"
 						spellCheck={false}
 						type="text"
 						value={src}
 					/>
 					<button
+						aria-label="Copy URL"
+						className={styles.urlClear}
+						onClick={() => navigator.clipboard.writeText(src)}
+						title="Copy URL"
+						type="button"
+					>
+						<CopyIcon />
+					</button>
+					<button
 						aria-label="Reset to default"
 						className={styles.urlClear}
-						onClick={() => setSrc(DEFAULT_SRC)}
+						onClick={() => handlePick(DEFAULT_SRC)}
 						title="Reset"
 						type="button"
 					>
@@ -234,17 +356,366 @@ export const LottieWorkbench = () => {
 			</aside>
 
 			<section className={shared.canvas}>
-				<div className={shared.section}>
-					<SectionHead title="Library">
-						Pick a lottie from the Gliff library, or paste any
-						remote URL into <em>src</em>.
+				<div className={cn(shared.section, shared.sectionGrow)}>
+					<SectionHead
+						action={<TabStrip onChange={setTab} tab={tab} />}
+						title={tab === "library" ? "Library" : "LottieFiles"}
+					>
+						{tab === "library" ? (
+							<>
+								Pick a lottie from the Gliff library, or paste any remote URL into{" "}
+								<em>src</em>.
+							</>
+						) : (
+							"Browse and import animations from LottieFiles. Imports land in the Library instantly."
+						)}
 					</SectionHead>
-					<LottieList onPick={setSrc} src={src} />
+					<LottieGrid
+						indexedSlugs={indexedSlugs}
+						libraryFiles={files}
+						lfItems={lfState.items}
+						lfLoadMore={lfState.loadMore}
+						lfLoading={lfState.loading}
+						lfNextCursor={lfState.nextCursor}
+						onPick={handlePick}
+						query={query}
+						setQuery={setQuery}
+						src={src}
+						tab={tab}
+					/>
 				</div>
 			</section>
 		</div>
 	);
 };
+
+const TabStrip = ({
+	tab,
+	onChange,
+}: {
+	tab: Tab;
+	onChange: (next: Tab) => void;
+}) => (
+	<div className={styles.libTabs}>
+		<div
+			aria-hidden="true"
+			className={styles.libTabIndicator}
+			data-tab={tab}
+		/>
+		{TABS.map((t) => (
+			<button
+				className={cn(styles.libTab, tab === t.id && styles.libTabActive)}
+				key={t.id}
+				onClick={() => onChange(t.id)}
+				type="button"
+			>
+				{t.label}
+			</button>
+		))}
+	</div>
+);
+
+const LottieGrid = ({
+	tab,
+	src,
+	onPick,
+	query,
+	setQuery,
+	libraryFiles,
+	lfItems,
+	lfLoading,
+	lfNextCursor,
+	lfLoadMore,
+	indexedSlugs,
+}: {
+	tab: Tab;
+	src: string;
+	onPick: (url: string, item?: LFItem) => void;
+	query: string;
+	setQuery: (q: string) => void;
+	libraryFiles: string[] | null;
+	lfItems: LFItem[];
+	lfLoading: boolean;
+	lfNextCursor: string | null;
+	lfLoadMore: () => void;
+	indexedSlugs: Set<string>;
+}) => {
+	const sentinelRef = useRef<HTMLDivElement>(null);
+
+	const libraryVisible = useMemo(() => {
+		if (!libraryFiles) return [];
+		const q = query.toLowerCase().trim();
+		if (!q) return libraryFiles;
+		return libraryFiles.filter((name) => name.toLowerCase().includes(q));
+	}, [libraryFiles, query]);
+
+	const itemsLength = tab === "library" ? libraryVisible.length : lfItems.length;
+	const totalLibrary = libraryFiles?.length ?? 0;
+	const libraryLoading = libraryFiles === null;
+
+	useEffect(() => {
+		if (tab !== "lottiefiles") return;
+		const el = sentinelRef.current;
+		if (!(el && lfNextCursor) || lfLoading) return;
+		const io = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((e) => e.isIntersecting)) lfLoadMore();
+			},
+			{ rootMargin: "200px" },
+		);
+		io.observe(el);
+		return () => io.disconnect();
+	}, [tab, lfNextCursor, lfLoading, lfLoadMore]);
+
+	const placeholder = tab === "library"
+		? "Filter lotties by name…"
+		: "Search LottieFiles…";
+	const total = tab === "library"
+		? totalLibrary
+		: itemsLength + (lfNextCursor ? 1 : 0);
+
+	return (
+		<>
+			<SearchBar
+				matched={itemsLength}
+				onChange={setQuery}
+				placeholder={placeholder}
+				total={total}
+				value={query}
+			/>
+			<div className={cn(shared.gridFrame, shared.gridFrameScroll)}>
+				<GridBody
+					indexedSlugs={indexedSlugs}
+					itemsLength={itemsLength}
+					lfItems={lfItems}
+					lfLoading={lfLoading}
+					libraryLoading={libraryLoading}
+					libraryVisible={libraryVisible}
+					onPick={onPick}
+					query={query}
+					sentinelRef={sentinelRef}
+					showSentinel={tab === "lottiefiles" && Boolean(lfNextCursor)}
+					src={src}
+					tab={tab}
+				/>
+			</div>
+		</>
+	);
+};
+
+const GridBody = ({
+	tab,
+	src,
+	onPick,
+	itemsLength,
+	libraryVisible,
+	lfItems,
+	libraryLoading,
+	lfLoading,
+	indexedSlugs,
+	query,
+	sentinelRef,
+	showSentinel,
+}: {
+	tab: Tab;
+	src: string;
+	onPick: (url: string, item?: LFItem) => void;
+	itemsLength: number;
+	libraryVisible: string[];
+	lfItems: LFItem[];
+	libraryLoading: boolean;
+	lfLoading: boolean;
+	indexedSlugs: Set<string>;
+	query: string;
+	sentinelRef: React.RefObject<HTMLDivElement | null>;
+	showSentinel: boolean;
+}) => {
+	if (tab === "library" && libraryLoading) {
+		return (
+			<div className={shared.gridEmpty}>
+				<Spinner label="Loading library" size={20} />
+			</div>
+		);
+	}
+	if (itemsLength === 0) {
+		if (tab === "lottiefiles" && lfLoading) {
+			return (
+				<div className={shared.gridEmpty}>
+					<Spinner label="Loading animations" size={20} />
+				</div>
+			);
+		}
+		const msg = query ? (
+			<>
+				No matches for <em>"{query}"</em>
+			</>
+		) : (
+			"No results."
+		);
+		return <div className={shared.gridEmpty}>{msg}</div>;
+	}
+
+	return (
+		<>
+			<div className={shared.gridGrid}>
+				{tab === "library"
+					? libraryVisible.map((name) => (
+							<LibraryCard
+								active={src === lottieUrl(name)}
+								key={name}
+								name={name}
+								onClick={() => onPick(lottieUrl(name))}
+							/>
+						))
+					: lfItems.map((it) => (
+							<LottieFilesCard
+								active={src === it.dotLottieUrl}
+								inLibrary={indexedSlugs.has(it.slug)}
+								item={it}
+								key={it.id}
+								onClick={() => onPick(it.dotLottieUrl, it)}
+							/>
+						))}
+			</div>
+			{showSentinel ? <div ref={sentinelRef} style={{ height: 1 }} /> : null}
+			{tab === "lottiefiles" && lfLoading ? (
+				<div className={shared.gridEmpty}>
+					<Spinner label="Loading more" size={18} />
+				</div>
+			) : null}
+		</>
+	);
+};
+
+const LibraryCard = memo(({
+	name,
+	active,
+	onClick,
+}: {
+	name: string;
+	active: boolean;
+	onClick: () => void;
+}) => {
+	const dlRef = useRef<DotLottie | null>(null);
+
+	const seekMid = useCallback(() => {
+		const dl = dlRef.current;
+		const total = dl?.totalFrames || 0;
+		if (dl && total > 0) dl.setFrame(Math.floor(total / 2));
+	}, []);
+
+	const attachedRef = useRef<DotLottie | null>(null);
+	const handleRef = useCallback(
+		(dl: DotLottie | null) => {
+			dlRef.current = dl;
+			if (!dl || attachedRef.current === dl) return;
+			attachedRef.current = dl;
+			dl.addEventListener("load", () => {
+				dl.play();
+				requestAnimationFrame(() => {
+					dl.pause();
+					seekMid();
+				});
+			});
+		},
+		[seekMid],
+	);
+
+	return (
+		<Card
+			active={active}
+			icon={
+				<div className={styles.lottieMini}>
+					<DotLottieReact
+						autoplay={false}
+						className={styles.lottiePlayer}
+						dotLottieRefCallback={handleRef}
+						loop
+						src={lottieUrl(name)}
+					/>
+				</div>
+			}
+			label={toLabel(name)}
+			onClick={onClick}
+			onMouseEnter={() => dlRef.current?.play()}
+			onMouseLeave={() => {
+				dlRef.current?.pause();
+				seekMid();
+			}}
+			title={name}
+		/>
+	);
+});
+LibraryCard.displayName = "LibraryCard";
+
+const LottieFilesCard = memo(({
+	item,
+	active,
+	inLibrary,
+	onClick,
+}: {
+	item: LFItem;
+	active: boolean;
+	inLibrary: boolean;
+	onClick: () => void;
+}) => {
+	const [hovering, setHovering] = useState(false);
+
+	return (
+		<Card
+			active={active}
+			icon={
+				<div className={styles.lottieMini}>
+					{hovering ? (
+						<DotLottieReact
+							autoplay
+							className={styles.lottiePlayer}
+							loop
+							src={item.dotLottieUrl}
+						/>
+					) : item.thumbnailUrl ? (
+						<img
+							alt=""
+							className={styles.lottieThumb}
+							height={48}
+							loading="lazy"
+							src={item.thumbnailUrl}
+							width={48}
+						/>
+					) : (
+						<div className={styles.lottiePlayer} />
+					)}
+				</div>
+			}
+			label={item.name}
+			meta={inLibrary ? "In Library" : undefined}
+			onClick={onClick}
+			onMouseEnter={() => setHovering(true)}
+			onMouseLeave={() => setHovering(false)}
+			title={item.slug}
+		/>
+	);
+});
+LottieFilesCard.displayName = "LottieFilesCard";
+
+const HeaderActionButton = ({
+	children,
+	onClick,
+	disabled,
+}: {
+	children: React.ReactNode;
+	onClick: () => void;
+	disabled?: boolean;
+}) => (
+	<button
+		className={styles.headerAction}
+		disabled={disabled}
+		onClick={onClick}
+		type="button"
+	>
+		{children}
+	</button>
+);
 
 const PlayIcon = () => (
 	<svg
@@ -356,6 +827,41 @@ const Transport = ({
 	);
 };
 
+const ImportIcon = () => (
+	<svg
+		aria-hidden="true"
+		fill="none"
+		height="12"
+		stroke="currentColor"
+		strokeLinecap="round"
+		strokeLinejoin="round"
+		strokeWidth="1.8"
+		viewBox="0 0 16 16"
+		width="12"
+	>
+		<path d="M8 2 V10" />
+		<path d="M4.5 6.5 L8 10 L11.5 6.5" />
+		<path d="M2.5 12 V13 A1 1 0 0 0 3.5 14 H12.5 A1 1 0 0 0 13.5 13 V12" />
+	</svg>
+);
+
+const CopyIcon = () => (
+	<svg
+		aria-hidden="true"
+		fill="none"
+		height="12"
+		stroke="currentColor"
+		strokeLinecap="round"
+		strokeLinejoin="round"
+		strokeWidth="1.6"
+		viewBox="0 0 16 16"
+		width="12"
+	>
+		<rect height="9" rx="1.6" width="9" x="5" y="5" />
+		<path d="M3 11 H2.6 A1 1 0 0 1 1.6 10 V3 A1 1 0 0 1 2.6 2 H10 A1 1 0 0 1 11 3 V3.4" />
+	</svg>
+);
+
 const ResetIcon = () => (
 	<svg
 		aria-hidden="true"
@@ -464,160 +970,3 @@ const MediaControls = ({
 		</div>
 	</div>
 );
-
-const LottieList = ({
-	src,
-	onPick,
-}: {
-	src: string;
-	onPick: (url: string) => void;
-}) => {
-	const files = useLottieIndex();
-	const [query, setQuery] = useState("");
-	const scrollRef = useRef<HTMLDivElement>(null);
-	const [cols, setCols] = useState(4);
-
-	const visible = useMemo(() => {
-		if (!files) return [];
-		const q = query.toLowerCase().trim();
-		if (!q) return files;
-		return files.filter((name) => name.toLowerCase().includes(q));
-	}, [files, query]);
-
-	useEffect(() => {
-		const el = scrollRef.current;
-		if (!el) return;
-		const ro = new ResizeObserver(([entry]) => {
-			const w = entry.contentRect.width;
-			setCols(
-				Math.max(
-					1,
-					Math.floor((w + ROW_GAP) / (CELL_MIN_WIDTH + ROW_GAP)),
-				),
-			);
-		});
-		ro.observe(el);
-		return () => ro.disconnect();
-	}, []);
-
-	const rowCount = Math.ceil(visible.length / cols);
-	const virtualizer = useVirtualizer({
-		count: rowCount,
-		getScrollElement: () => scrollRef.current,
-		estimateSize: () => ROW_TOTAL,
-		overscan: 3,
-	});
-
-	return (
-		<>
-			<SearchBar
-				matched={visible.length}
-				onChange={setQuery}
-				placeholder="Filter lotties by name…"
-				total={files?.length ?? 0}
-				value={query}
-			/>
-			<div className={styles.lottieScroll} ref={scrollRef}>
-				{files === null ? (
-					<div className={shared.gridEmpty}>Loading library…</div>
-				) : visible.length === 0 ? (
-					<div className={shared.gridEmpty}>
-						No matches for <em>"{query}"</em>
-					</div>
-				) : (
-					<div
-						style={{
-							height: virtualizer.getTotalSize(),
-							position: "relative",
-						}}
-					>
-						{virtualizer.getVirtualItems().map((row) => {
-							const start = row.index * cols;
-							const rowNames = visible.slice(start, start + cols);
-							return (
-								<div
-									className={shared.gridRow}
-									key={row.key}
-									style={{
-										transform: `translateY(${row.start}px)`,
-										gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-										height: row.size,
-									}}
-								>
-									{rowNames.map((name) => (
-										<LottieCard
-											active={src === lottieUrl(name)}
-											key={name}
-											name={name}
-											onClick={() => onPick(lottieUrl(name))}
-										/>
-									))}
-								</div>
-							);
-						})}
-					</div>
-				)}
-			</div>
-		</>
-	);
-};
-
-const LottieCard = ({
-	name,
-	active,
-	onClick,
-}: {
-	name: string;
-	active: boolean;
-	onClick: () => void;
-}) => {
-	const dlRef = useRef<DotLottie | null>(null);
-
-	const seekMid = useCallback(() => {
-		const dl = dlRef.current;
-		const total = dl?.totalFrames || 0;
-		if (dl && total > 0) dl.setFrame(Math.floor(total / 2));
-	}, []);
-
-	const handleRef = useCallback(
-		(dl: DotLottie | null) => {
-			dlRef.current = dl;
-			if (!dl) return;
-			dl.addEventListener("load", () => {
-				// Briefly play, then pause + seek to mid; this forces the
-				// renderer to draw the mid frame instead of leaving it blank.
-				dl.play();
-				requestAnimationFrame(() => {
-					dl.pause();
-					seekMid();
-				});
-			});
-		},
-		[seekMid],
-	);
-
-	return (
-		<Card
-			active={active}
-			icon={
-				<div className={styles.lottieMini}>
-					<DotLottieReact
-						autoplay={false}
-						className={styles.lottiePlayer}
-						dotLottieRefCallback={handleRef}
-						loop
-						src={lottieUrl(name)}
-					/>
-				</div>
-			}
-			label={toLabel(name)}
-			onClick={onClick}
-			onMouseEnter={() => dlRef.current?.play()}
-			onMouseLeave={() => {
-				dlRef.current?.pause();
-				seekMid();
-			}}
-			title={name}
-		/>
-	);
-};

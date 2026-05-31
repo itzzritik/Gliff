@@ -82,13 +82,18 @@ export const iconSize = (px: number | string): TIconSizeStyle => ({
 export const SectionHead = ({
 	title,
 	children,
+	action,
 }: {
 	title: string;
 	children?: ReactNode;
+	action?: ReactNode;
 }) => (
 	<header className={styles.sectionHead}>
-		<h2 className={styles.sectionTitle}>{title}</h2>
-		{children ? <p className={styles.sectionDesc}>{children}</p> : null}
+		<div className={styles.sectionHeadMain}>
+			<h2 className={styles.sectionTitle}>{title}</h2>
+			{children ? <p className={styles.sectionDesc}>{children}</p> : null}
+		</div>
+		{action ? <div className={styles.sectionHeadAction}>{action}</div> : null}
 	</header>
 );
 
@@ -175,6 +180,7 @@ export const Preview = ({
 	meta,
 	copyLabel,
 	onCopy,
+	headerAction,
 	footer,
 	children,
 }: {
@@ -183,10 +189,14 @@ export const Preview = ({
 	meta?: (string | null | undefined | false)[];
 	copyLabel?: string;
 	onCopy?: () => void;
+	headerAction?: ReactNode;
 	footer?: ReactNode;
 	children: ReactNode;
 }) => {
 	const metaItems = meta?.filter(Boolean) as string[] | undefined;
+	let action: ReactNode = null;
+	if (headerAction) action = headerAction;
+	else if (onCopy && copyLabel) action = <CopyButton label={copyLabel} onCopy={onCopy} />;
 	return (
 		<div className={styles.preview}>
 			<div className={styles.previewInfo}>
@@ -200,9 +210,7 @@ export const Preview = ({
 					>
 						{title}
 					</div>
-					{onCopy && copyLabel ? (
-						<CopyButton label={copyLabel} onCopy={onCopy} />
-					) : null}
+					{action}
 				</div>
 				{metaItems && metaItems.length > 0 ? (
 					<div className={styles.previewMeta}>
@@ -314,4 +322,20 @@ export const SearchBar = ({
 			<NumberFlip value={matched} />/<NumberFlip value={total} />
 		</span>
 	</div>
+);
+
+export const Spinner = ({
+	size = 14,
+	label = "Loading",
+}: {
+	size?: number;
+	label?: string;
+}) => (
+	<output
+		aria-label={label}
+		className={styles.spinner}
+		style={{ "--spinner-size": `${size}px` } as CSSProperties}
+	>
+		<span aria-hidden="true" className={styles.spinnerRing} />
+	</output>
 );

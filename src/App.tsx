@@ -3,7 +3,7 @@ import { IconWorkbench } from "./playground/components/Icon";
 import { LottieWorkbench } from "./playground/components/Lottie";
 import "./playground/playground.css";
 import { useTheme } from "./playground/useTheme";
-import { useUrlState } from "./utils/useUrlState";
+import { useUrlState } from "./playground/useUrlState";
 
 declare const __APP_VERSION__: string;
 const VERSION = `v${__APP_VERSION__}`;

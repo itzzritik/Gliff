@@ -8,7 +8,7 @@ import {
 } from "react";
 import { Icon, type TIconProps } from "../../components/Icon/Icon";
 import { cn } from "../../utils/cn";
-import { useUrlState } from "../../utils/useUrlState";
+import { useUrlState } from "../useUrlState";
 import { type IconData, useIconData } from "../useIconData";
 import styles from "./Icon.module.css";
 import {
@@ -398,7 +398,7 @@ const VariantMatrix = ({
 	}, [supportedList, query]);
 
 	return (
-		<div className={shared.section}>
+		<div className={cn(shared.section, shared.sectionCapped)}>
 			<SectionHead title="Variants">
 				Selected glyph rendered across{" "}
 				<NumberFlip value={supportedList.length} /> available styles.
@@ -410,7 +410,7 @@ const VariantMatrix = ({
 				total={supportedList.length}
 				value={query}
 			/>
-			<div className={shared.gridFrame}>
+			<div className={cn(shared.gridFrame, shared.gridFrameScroll)}>
 				{visible.length === 0 ? (
 					<div className={shared.gridEmpty}>
 						No matches for <em>"{query}"</em>
@@ -495,7 +495,7 @@ const GlyphCatalog = ({
 	});
 
 	return (
-		<div className={shared.section}>
+		<div className={cn(shared.section, shared.sectionGrow)}>
 			<SectionHead title="Glyphs">
 				<NumberFlip value={allGlyphs.length} /> glyphs in{" "}
 				<em>

@@ -4,7 +4,7 @@ on:
     workflow_dispatch:
         inputs:
             version:
-                description: Release bump
+                description: Version bump for npm release
                 required: true
                 default: patch
                 type: choice
@@ -27,8 +27,7 @@ concurrency:
 
 jobs:
     publish:
-        if: ${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'publish ') }}
-        name: ${{ github.event_name == 'workflow_dispatch' && format('Publish {0} version', inputs.version) || 'Build' }}
+        name: Build
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
@@ -43,6 +42,17 @@ jobs:
             - uses: pnpm/action-setup@v6
 
             - run: pnpm install --frozen-lockfile
+
+            - name: Pin Assets SHA
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  SHA=$(gh api repos/itzzjarvis/Assets/commits/main --jq .sha)
+                  [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "❌ Invalid SHA: '$SHA'"; exit 1; }
+                  sed -i "s|const SHA = \"[a-f0-9]\{40\}\"|const SHA = \"$SHA\"|" src/utils/assets.ts
+                  grep -q "\"$SHA\"" src/utils/assets.ts || { echo "❌ SHA not rewritten"; exit 1; }
+                  echo "📌 CDN → Assets@${SHA:0:7}"
 
             - name: Setup Git & SSH signing
               if: github.event_name == 'workflow_dispatch'
@@ -59,23 +69,12 @@ jobs:
                   git config tag.gpgsign true
                   npm config set sign-git-tag true
 
-            - name: Pin Assets SHA
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  set -euo pipefail
-                  SHA=$(gh api repos/itzzjarvis/Assets/commits/main --jq .sha)
-                  [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "❌ Invalid SHA: '$SHA'"; exit 1; }
-                  sed -i "s|const SHA = \"[a-f0-9]\{40\}\"|const SHA = \"$SHA\"|" src/utils/assets.ts
-                  grep -q "\"$SHA\"" src/utils/assets.ts || { echo "❌ SHA not rewritten"; exit 1; }
-                  echo "📌 CDN → Assets@${SHA:0:7}"
-
             - name: Bump version & tag
               if: github.event_name == 'workflow_dispatch'
               env:
-                  VERSION: ${{ inputs.version }}
+                  BUMP: ${{ inputs.version }}
               run: |
-                  TAG=$(npm version $VERSION --no-git-tag-version)
+                  TAG=$(npm version $BUMP --no-git-tag-version)
                   git tag -d $TAG 2>/dev/null || true
                   git push origin :refs/tags/$TAG 2>/dev/null || true
                   git commit -am "publish $TAG"
